@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "HHC 教會",
+    "slug": "hhc-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "tw.org.alive.hhcapp"
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false,
+      "package": "tw.org.alive.hhcapp",
+      "icon": "./assets/icon.png"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "scheme": "hhc-app"
+  }
+}
