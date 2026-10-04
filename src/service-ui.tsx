@@ -141,7 +141,7 @@ export function SectionTitle({
   colors: Palette;
 }) {
   return (
-    <View style={{ gap: space.xs, marginTop: space.sm }}>
+    <View style={{ gap: space.xs, marginTop: space.lg }}>
       <Text
         accessibilityRole="header"
         style={[type.heading, { color: colors.text }]}
@@ -189,11 +189,13 @@ export function AssignmentRow({
   colors,
   zone,
   onPress,
+  viewerId,
 }: {
   assignment: Assignment;
   colors: Palette;
   zone: string;
   onPress: () => void;
+  viewerId?: string;
 }) {
   const d = parts(a.startsAt, zone);
   const status = a.cancelled
@@ -203,7 +205,9 @@ export function AssignmentRow({
       : a.request?.status === "active"
         ? a.request.mode === "open"
           ? "徵求代班"
-          : "等待代班回覆"
+          : a.request.targetMemberId === viewerId
+            ? "邀請你代班"
+            : "等待代班回覆"
         : a.helpOpen
           ? "負責人協助中"
           : "";
@@ -220,7 +224,7 @@ export function AssignmentRow({
         },
       ]}
     >
-      <View style={s.dateRail}>
+      <View style={[s.dateRail, { backgroundColor: colors.canvas }]}>
         <Text style={[type.caption, { color: colors.muted }]}>{d.month}</Text>
         <Text style={[s.day, { color: colors.text }]}>{d.day}</Text>
         <Text style={[type.caption, { color: colors.muted }]}>{d.weekday}</Text>
@@ -232,12 +236,33 @@ export function AssignmentRow({
         <Text style={[type.small, { color: colors.muted }]}>
           {d.time} · {a.meetingName}
         </Text>
-        <Text style={[type.small, { color: colors.muted }]}>
-          {a.assigneeName || (a.assigneeMemberId ? "已安排同工" : "待補人選")}
-        </Text>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+        >
+          <View style={[s.avatar, { backgroundColor: colors.soft }]}>
+            <Text style={[type.caption, { color: colors.primary }]}>
+              {a.assigneeName?.slice(0, 1) || "—"}
+            </Text>
+          </View>
+          <Text style={[type.small, { color: colors.muted }]}>
+            {a.assigneeName || (a.assigneeMemberId ? "已安排同工" : "待補人選")}
+          </Text>
+        </View>
         {status ? (
           <Text
-            style={[type.caption, { color: colors.primary, fontWeight: "600" }]}
+            style={[
+              type.caption,
+              {
+                color: colors.primary,
+                fontWeight: "600",
+                backgroundColor: colors.soft,
+                alignSelf: "flex-start",
+                paddingHorizontal: space.sm,
+                paddingVertical: space.xs,
+                borderRadius: 8,
+                overflow: "hidden",
+              },
+            ]}
           >
             {status}
           </Text>
@@ -266,43 +291,51 @@ export function NextService({
       onPress={onPress}
       style={({ pressed }) => [
         s.nextService,
-        { backgroundColor: colors.surface, opacity: pressed ? 0.8 : 1 },
+        { backgroundColor: colors.feature, opacity: pressed ? 0.85 : 1 },
       ]}
     >
-      <View style={s.heroTop}>
-        <View style={{ gap: space.sm, flex: 1 }}>
-          <Text
-            style={[type.small, { color: colors.primary, fontWeight: "600" }]}
-          >
+      <View style={s.heroEyebrow}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+        >
+          <AppIcon name="service" color={colors.featureAccent} size={18} />
+          <Text style={[type.small, { color: colors.featureMuted }]}>
             下一次服事
           </Text>
-          <Text style={[type.title, { color: colors.text }]}>{a.label}</Text>
-          <Text style={[type.small, { color: colors.muted }]}>
-            {a.teamName}
+        </View>
+        <Text style={[type.caption, { color: colors.featureMuted }]}>
+          {a.teamName}
+        </Text>
+      </View>
+      <View style={s.heroTop}>
+        <View style={{ gap: space.sm, flex: 1 }}>
+          <Text style={[type.title, { color: colors.featureText }]}>
+            {a.label}
+          </Text>
+          <Text style={[type.body, { color: colors.featureMuted }]}>
+            {d.time} · {a.meetingName}
           </Text>
         </View>
-        <View style={[s.heroDate, { backgroundColor: colors.soft }]}>
-          <Text style={[type.caption, { color: colors.primary }]}>
-            {d.month}
+        <View style={s.heroDate}>
+          <Text style={[s.heroDay, { color: colors.featureAccent }]}>
+            {d.day}
           </Text>
-          <Text style={[type.numeral, { color: colors.primary }]}>{d.day}</Text>
-          <Text style={[type.caption, { color: colors.primary }]}>
-            {d.weekday}
+          <Text style={[type.caption, { color: colors.featureMuted }]}>
+            {d.month} · {d.weekday}
           </Text>
         </View>
       </View>
-      <View style={[s.heroFooter, { borderColor: colors.line }]}>
+      <View style={[s.heroFooter, { borderColor: colors.featureLine }]}>
         <View style={{ flex: 1, gap: space.xs }}>
-          <Text style={[type.body, { color: colors.text, fontWeight: "500" }]}>
-            {d.time} · {a.meetingName}
-          </Text>
-          <Text style={[type.caption, { color: colors.muted }]}>
+          <Text style={[type.small, { color: colors.featureText }]}>
             {a.request?.status === "active"
               ? "代班尚未完成，這次仍由你服事"
-              : "查看安排與代班選項"}
+              : "查看服事安排"}
           </Text>
         </View>
-        <AppIcon name="next" color={colors.primary} />
+        <View style={[s.heroArrow, { backgroundColor: colors.featureAccent }]}>
+          <AppIcon name="next" color={colors.feature} size={20} />
+        </View>
       </View>
     </Pressable>
   );
@@ -649,7 +682,7 @@ export function ReplacementActions({
 const s = StyleSheet.create({
   action: {
     minHeight: 52,
-    borderRadius: 12,
+    borderRadius: 16,
     borderCurve: "continuous",
     padding: space.md,
     flexDirection: "row",
@@ -665,7 +698,20 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  dateRail: { width: 48, alignItems: "center" },
+  dateRail: {
+    width: 52,
+    alignItems: "center",
+    paddingVertical: space.sm,
+    borderRadius: 14,
+    borderCurve: "continuous",
+  },
+  avatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   day: {
     fontSize: 28,
     lineHeight: 34,
@@ -673,18 +719,36 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   nextService: {
-    borderRadius: 20,
+    borderRadius: 28,
     borderCurve: "continuous",
     padding: space.page,
-    gap: space.page,
+    gap: space.lg,
+  },
+  heroEyebrow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: space.sm,
   },
   heroTop: { flexDirection: "row", gap: space.lg, alignItems: "flex-start" },
   heroDate: {
-    padding: space.md,
-    borderRadius: 12,
-    borderCurve: "continuous",
     minWidth: 72,
     alignItems: "center",
+  },
+  heroDay: {
+    fontSize: 54,
+    lineHeight: 58,
+    fontWeight: "300",
+    letterSpacing: -2,
+    fontVariant: ["tabular-nums"],
+  },
+  heroArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroFooter: {
     borderTopWidth: StyleSheet.hairlineWidth,

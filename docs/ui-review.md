@@ -52,5 +52,22 @@ their full interaction redesign remains a separate iteration.
 - Brand and visual acceptance belongs to the user; passing builds does not prove
   that the design meets their preference.
 
-Preview: `http://localhost:5196`. Reload resets synthetic changes. Recreate with
+Preview: `http://localhost:5197`. Reload resets synthetic changes. Recreate with
 `npm run demo:web`; do not run it while another server occupies that port.
+
+## Modern mobile revision
+
+The user explicitly relaxed shared web UI/style constraints. Mobile now owns
+its palette, typography and component appearance, retaining rose as the brand
+connection. A dark slate next-service surface anchors the home screen; lighter
+neutral surfaces, date rails, colleague initials, compact status labels and
+selected tab backgrounds distinguish the rest of the interface.
+
+Incoming nominated requests now say that the viewer is invited, rather than
+using the same waiting status shown to the requester. No API or permission
+contract changed and no new dependencies were added in this revision.
+
+This revision is isolated on feat/mobile-modern-20261004. The previous preview
+remains at localhost:5196 for comparison. Typecheck, seven tests and all-platform
+exports passed; browser checks cover 320px/390px, light/dark, nomination and
+withdrawal. Native runtime acceptance is still pending.

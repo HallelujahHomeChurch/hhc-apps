@@ -469,6 +469,7 @@ function AppContent() {
     <AssignmentRow
       key={a.id}
       assignment={a}
+      viewerId={teams.find((t) => t.id === a.teamId)?.memberId}
       colors={colors}
       zone={displayZone}
       onPress={() => void openDetail(a.id)}
@@ -495,7 +496,7 @@ function AppContent() {
       >
         <View style={styles.header}>
           <View style={styles.row}>
-            {text("哈利路亞家教會", {
+            {text("HHC  /  哈利路亞家教會", {
               ...type.small,
               color: colors.primary,
               fontWeight: "600",
@@ -515,7 +516,7 @@ function AppContent() {
           {text(
             signed
               ? tab === "home"
-                ? "接下來的服事"
+                ? "我的服事日常"
                 : labels[tab]
               : "一起服事",
             styles.title,
@@ -577,7 +578,10 @@ function AppContent() {
             <FlatList
               keyboardShouldPersistTaps="handled"
               contentInsetAdjustmentBehavior="automatic"
-              contentContainerStyle={styles.content}
+              contentContainerStyle={[
+                styles.content,
+                tab === "service" && { gap: 0 },
+              ]}
               refreshControl={
                 <RefreshControl
                   refreshing={busy}
@@ -601,7 +605,7 @@ function AppContent() {
               keyExtractor={(a) => a.id}
               renderItem={({ item }) => card(item)}
               ListHeaderComponent={
-                <View style={{ gap: space.lg }}>
+                <View style={{ gap: space.lg, paddingBottom: space.lg }}>
                   {stale
                     ? text(
                         "目前顯示暫存班表；連線恢復前無法確認最新權限與安排。",
@@ -630,7 +634,7 @@ function AppContent() {
                         title="需要你的回覆"
                         subtitle={
                           invitations.length
-                            ? `${invitations.length} 位同工邀請你一起配搭`
+                            ? `${invitations.length} 則邀請，等你確認時間`
                             : undefined
                         }
                         colors={colors}
@@ -947,14 +951,25 @@ function AppContent() {
                     { opacity: pressed ? 0.6 : 1 },
                   ]}
                 >
-                  <AppIcon
-                    name={t}
-                    color={t === tab ? colors.primary : colors.muted}
-                  />
+                  <View
+                    style={[
+                      styles.tabIcon,
+                      {
+                        backgroundColor:
+                          t === tab ? colors.soft : "transparent",
+                      },
+                    ]}
+                  >
+                    <AppIcon
+                      name={t}
+                      color={t === tab ? colors.primary : colors.muted}
+                    />
+                  </View>
                   <Text
                     style={{
                       color: t === tab ? colors.primary : colors.muted,
-                      fontWeight: t === tab ? "700" : "400",
+                      ...type.caption,
+                      fontWeight: t === tab ? "600" : "400",
                     }}
                   >
                     {labels[t]}
@@ -1140,8 +1155,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: space.sm,
-    gap: space.xs,
+    gap: 2,
     minHeight: 60,
+  },
+  tabIcon: {
+    width: 48,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconButton: {
     minWidth: 48,
@@ -1149,7 +1171,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  group: { borderRadius: 16, borderCurve: "continuous", overflow: "hidden" },
+  group: { borderRadius: 22, borderCurve: "continuous", overflow: "hidden" },
   textLink: { minHeight: 48 },
   segment: { flexDirection: "row", borderRadius: 12, padding: space.xs },
   segmentItem: {
@@ -1163,7 +1185,7 @@ const styles = StyleSheet.create({
   detailGroup: {
     padding: space.lg,
     gap: space.lg,
-    borderRadius: 16,
+    borderRadius: 24,
     borderCurve: "continuous",
   },
   detailRow: { flexDirection: "row", alignItems: "center", gap: space.md },
