@@ -6,13 +6,14 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState, Platform, useColorScheme } from "react-native";
+import { AppState, Platform } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Notifications from "expo-notifications";
+import { useAppearance } from "./use-appearance";
 import { light, dark } from "./theme";
 import { demoEnabled, demoFetch, demoSession } from "./demo";
 import { registerPush, revokePush } from "./push";
@@ -37,7 +38,8 @@ type API = ReturnType<typeof serviceAPI>;
 function useServiceState() {
   const router = useRouter();
   const pathname = usePathname();
-  const colors = useColorScheme() === "dark" ? dark : light;
+  const { mode, toggleAppearance } = useAppearance();
+  const colors = mode === "dark" ? dark : light;
   const [session, setSession] = useState<Sessions | null>(null);
   const [stale, setStale] = useState(false);
   const [signed, setSigned] = useState(false);
@@ -431,6 +433,8 @@ function useServiceState() {
   }
   return {
     colors,
+    mode,
+    toggleAppearance,
     session,
     signed,
     ready,

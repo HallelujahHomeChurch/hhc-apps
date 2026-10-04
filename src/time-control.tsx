@@ -37,6 +37,7 @@ export function TimeControl({
           locale="zh_TW"
           disabled={disabled}
           accentColor={colors.primary}
+          themeVariant={colors.scheme}
           positiveButton={{ label: "確定" }}
           negativeButton={{ label: "取消" }}
           onDismiss={() => setOpen(false)}

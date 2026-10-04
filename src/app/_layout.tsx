@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorScheme } from "react-native";
+import { Pressable } from "react-native";
 import {
   Stack,
   ThemeProvider,
@@ -9,10 +9,10 @@ import {
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ServiceProvider, useService } from "../service-state";
-import { Brand } from "../service-ui";
+import { AppIcon, Brand } from "../service-ui";
 export const unstable_settings = { anchor: "(tabs)" };
 function Navigation() {
-  const { colors, signed } = useService();
+  const { colors, signed, mode, toggleAppearance } = useService();
   const path = usePathname();
   const title = !signed
     ? ""
@@ -23,7 +23,7 @@ function Navigation() {
         : path === "/profile"
           ? "我的"
           : "HHC";
-  const theme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
+  const theme = mode === "dark" ? DarkTheme : DefaultTheme;
   return (
     <ThemeProvider
       value={{
@@ -39,10 +39,32 @@ function Navigation() {
         },
       }}
     >
-      <StatusBar style="auto" />
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerTintColor: colors.primary,
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                mode === "dark" ? "切換淺色模式" : "切換深色模式"
+              }
+              onPress={toggleAppearance}
+              style={({ pressed }) => ({
+                width: 48,
+                height: 48,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.5 : 1,
+              })}
+            >
+              <AppIcon
+                name={mode === "dark" ? "sun" : "moon"}
+                color={colors.text}
+                size={21}
+              />
+            </Pressable>
+          ),
           headerTitleStyle: {
             color: colors.text,
             fontWeight: "600",

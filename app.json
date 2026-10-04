@@ -4,7 +4,7 @@
     "slug": "hhc-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/hhc-app-icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -13,10 +13,10 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "tw.org.alive.hhcapp",
-      "icon": "./assets/icon.png"
+      "icon": "./assets/hhc-app-icon.png"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/hhc-logo.png",
       "bundler": "metro",
       "output": "single"
     },

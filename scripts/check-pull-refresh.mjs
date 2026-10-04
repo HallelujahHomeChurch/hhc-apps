@@ -13,7 +13,7 @@ await p.cdp("Emulation.setTouchEmulationEnabled", {
   enabled: true,
   maxTouchPoints: 1,
 });
-await p.goto("http://localhost:5200");
+await p.goto("http://localhost:5201");
 await p.waitForSelector('loc=role:button[name*="下一次服事"]', {
   state: "visible",
 });

@@ -1,6 +1,7 @@
 // Mobile owns its visual language; rose remains the link to the HHC brand.
 export const light = {
-  canvas: "#f5f6f8",
+  scheme: "light" as "light" | "dark",
+  canvas: "#f6f7f9",
   surface: "#ffffff",
   text: "#242c35",
   muted: "#6b7480",
@@ -10,13 +11,14 @@ export const light = {
   success: "#386653",
   successSoft: "#e9f1ed",
   onPrimary: "#ffffff",
-  feature: "#27343d",
-  featureText: "#ffffff",
-  featureMuted: "#c6d0d5",
-  featureAccent: "#f2b5a8",
-  featureLine: "#45515a",
+  feature: "#ffffff",
+  featureText: "#242c35",
+  featureMuted: "#6b7480",
+  featureAccent: "#a44740",
+  featureLine: "#e6e9ed",
 };
 export const dark: typeof light = {
+  scheme: "dark",
   canvas: "#141b21",
   surface: "#202a33",
   text: "#f0f3f5",
@@ -45,12 +47,12 @@ export const space = {
 };
 export const type = {
   title: {
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: 24,
+    lineHeight: 32,
     fontWeight: "600" as const,
     letterSpacing: -0.5,
   },
-  heading: { fontSize: 19, lineHeight: 28, fontWeight: "600" as const },
+  heading: { fontSize: 18, lineHeight: 26, fontWeight: "600" as const },
   body: { fontSize: 16, lineHeight: 25 },
   small: { fontSize: 14, lineHeight: 22 },
   caption: { fontSize: 12, lineHeight: 18 },

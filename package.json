@@ -38,7 +38,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
+    "ios": "expo run:ios",
+    "ios:demo": "EXPO_PUBLIC_DEMO=true expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

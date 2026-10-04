@@ -97,6 +97,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
       >
         <View pointerEvents={saving ? "none" : "auto"}>
           <Host
+            colorScheme={colors.scheme}
             seedColor={colors.primary}
             matchContents={{ vertical: true }}
             style={{ width: "100%" }}
@@ -142,6 +143,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
                 </select>
               ) : (
                 <Host
+                  colorScheme={colors.scheme}
                   seedColor={colors.primary}
                   matchContents={{ vertical: true }}
                   style={{ width: "100%" }}
@@ -244,7 +246,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
       >
         <Text style={[type.body, { color: colors.muted }]}>登出</Text>
       </Pressable>
-      <Host>
+      <Host colorScheme={colors.scheme}>
         <BottomSheet
           isPresented={zoneFor !== null}
           onDismiss={() => setZoneFor(null)}
@@ -392,6 +394,7 @@ function SettingsRow({
     );
   return (
     <Host
+      colorScheme={colors.scheme}
       seedColor={colors.primary}
       matchContents={{ vertical: true }}
       style={{ width: "100%" }}

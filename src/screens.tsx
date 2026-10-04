@@ -6,6 +6,8 @@ import {
   Pressable,
   ScrollView,
   type ScrollViewProps,
+  type StyleProp,
+  type ViewStyle,
   Text,
   View,
 } from "react-native";
@@ -184,9 +186,10 @@ export function TabScreen({ tab }: { tab: Tab }) {
   );
   const open = (id: string) =>
     router.push({ pathname: "/assignment/[id]", params: { id } });
-  const row = (a: Assignment) => (
+  const row = (a: Assignment, style?: StyleProp<ViewStyle>) => (
     <AssignmentRow
       key={a.id}
+      style={style}
       assignment={a}
       colors={colors}
       zone={displayZone}
@@ -264,13 +267,13 @@ export function TabScreen({ tab }: { tab: Tab }) {
                 title={`待回覆 ${invitations.length}`}
                 colors={colors}
               />
-              <View style={group}>{invitations.map(row)}</View>
+              <View style={group}>{invitations.map((a) => row(a))}</View>
             </>
           )}
           {mine.length > 1 && (
             <>
               <SectionTitle title="接下來" colors={colors} />
-              <View style={group}>{mine.slice(1, 4).map(row)}</View>
+              <View style={group}>{mine.slice(1, 4).map((a) => row(a))}</View>
             </>
           )}
         </>
@@ -492,7 +495,16 @@ export function TabScreen({ tab }: { tab: Tab }) {
       {...scrollProps}
       data={roster}
       keyExtractor={(a) => a.id}
-      renderItem={({ item }) => row(item)}
+      renderItem={({ item, index }) =>
+        row(item, {
+          borderCurve: "continuous",
+          borderTopLeftRadius: index === 0 ? 22 : 0,
+          borderTopRightRadius: index === 0 ? 22 : 0,
+          borderBottomLeftRadius: index === roster.length - 1 ? 22 : 0,
+          borderBottomRightRadius: index === roster.length - 1 ? 22 : 0,
+          overflow: "hidden",
+        })
+      }
       ListHeaderComponent={content}
     />
   ) : (

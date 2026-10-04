@@ -6,6 +6,8 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  type StyleProp,
+  type ViewStyle,
   ScrollView,
   Text,
   TextInput,
@@ -31,6 +33,8 @@ const icons = {
   search: ["magnifyingglass", "search"],
   refresh: ["arrow.clockwise", "refresh"],
   close: ["xmark", "close"],
+  sun: ["sun.max", "light-mode"],
+  moon: ["moon", "dark-mode"],
 } as const;
 export function AppIcon({
   name,
@@ -188,6 +192,7 @@ export function AssignmentRow({
   onPress,
   viewerId,
   showAssignee = true,
+  style,
 }: {
   assignment: Assignment;
   colors: Palette;
@@ -195,6 +200,7 @@ export function AssignmentRow({
   onPress: () => void;
   viewerId?: string;
   showAssignee?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const d = parts(a.startsAt, zone);
   const status = a.cancelled
@@ -221,9 +227,10 @@ export function AssignmentRow({
           borderColor: colors.line,
           backgroundColor: pressed ? colors.soft : colors.surface,
         },
+        style,
       ]}
     >
-      <View style={[s.dateRail, { backgroundColor: colors.canvas }]}>
+      <View style={s.dateRail}>
         <Text style={[type.caption, { color: colors.muted }]}>{d.month}</Text>
         <Text style={[s.day, { color: colors.text }]}>{d.day}</Text>
         <Text style={[type.caption, { color: colors.muted }]}>{d.weekday}</Text>
@@ -283,42 +290,48 @@ export function NextService({
       onPress={onPress}
       style={({ pressed }) => [
         s.nextService,
-        { backgroundColor: colors.feature, opacity: pressed ? 0.85 : 1 },
+        {
+          backgroundColor: colors.feature,
+          borderColor: colors.featureLine,
+          opacity: pressed ? 0.85 : 1,
+        },
       ]}
     >
       <View style={s.heroEyebrow}>
-        <View
-          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
-        >
-          <AppIcon name="service" color={colors.featureAccent} size={18} />
-          <Text style={[type.small, { color: colors.featureMuted }]}>
-            下一次服事
-          </Text>
-        </View>
-        <View
-          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
-        >
-          <Text style={[type.caption, { color: colors.featureMuted }]}>
-            {a.teamName}
-          </Text>
-          <AppIcon name="next" color={colors.featureAccent} size={18} />
-        </View>
+        <Text style={[type.small, { color: colors.featureMuted }]}>
+          下一次服事
+        </Text>
+        <AppIcon name="next" color={colors.featureMuted} size={18} />
       </View>
       <View style={s.heroTop}>
-        <View style={{ gap: space.sm, flex: 1 }}>
-          <Text style={[type.title, { color: colors.featureText }]}>
-            {a.label}
-          </Text>
-          <Text style={[type.body, { color: colors.featureMuted }]}>
-            {d.time} · {a.meetingName}
-          </Text>
-        </View>
         <View style={s.heroDate}>
+          <Text style={[type.caption, { color: colors.featureMuted }]}>
+            {d.month}
+          </Text>
           <Text style={[s.heroDay, { color: colors.featureAccent }]}>
             {d.day}
           </Text>
           <Text style={[type.caption, { color: colors.featureMuted }]}>
-            {d.month} · {d.weekday}
+            {d.weekday}
+          </Text>
+        </View>
+        <View
+          style={{
+            gap: space.sm,
+            flex: 1,
+            borderLeftWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.featureLine,
+            paddingLeft: space.lg,
+          }}
+        >
+          <Text style={[type.title, { color: colors.featureText }]}>
+            {a.label}
+          </Text>
+          <Text style={[type.body, { color: colors.featureText }]}>
+            {d.time} · {a.meetingName}
+          </Text>
+          <Text style={[type.small, { color: colors.featureMuted }]}>
+            {a.teamName}
           </Text>
         </View>
       </View>
@@ -454,7 +467,7 @@ export function ReplacementActions({
           {failure}
         </Text>
       ) : null}
-      <Host>
+      <Host colorScheme={colors.scheme}>
         <BottomSheet
           isPresented={step !== null}
           onDismiss={() => {
@@ -724,7 +737,7 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   dateRail: {
-    width: 52,
+    width: 44,
     alignItems: "center",
     paddingVertical: space.sm,
     borderRadius: 14,
@@ -737,7 +750,8 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   nextService: {
-    borderRadius: 28,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
     borderCurve: "continuous",
     padding: space.page,
     gap: space.lg,
@@ -749,14 +763,14 @@ const s = StyleSheet.create({
     flexWrap: "wrap",
     gap: space.sm,
   },
-  heroTop: { flexDirection: "row", gap: space.lg, alignItems: "flex-start" },
+  heroTop: { flexDirection: "row", gap: space.lg, alignItems: "center" },
   heroDate: {
-    minWidth: 72,
+    minWidth: 56,
     alignItems: "center",
   },
   heroDay: {
-    fontSize: 54,
-    lineHeight: 58,
+    fontSize: 48,
+    lineHeight: 54,
     fontWeight: "300",
     letterSpacing: -2,
     fontVariant: ["tabular-nums"],
