@@ -302,7 +302,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
           colors={colors}
         />
       </View>
-      <Host colorScheme={colors.scheme}>
+      <Host colorScheme={colors.scheme} seedColor={colors.primary}>
         <BottomSheet
           isPresented={zoneFor !== null}
           onDismiss={() => setZoneFor(null)}
@@ -456,11 +456,21 @@ function SettingsRow({
       style={{ width: "100%" }}
     >
       <ListItem
+        colors={{
+          containerColor: colors.surface,
+          contentColor: colors.text,
+          supportingContentColor: colors.muted,
+          trailingContentColor: colors.muted,
+        }}
         onPress={onPress}
         supportingText={value}
         trailing={
           onPress ? (
-            <AppIcon name="next" color={colors.muted} size={18} />
+            Platform.OS === "android" ? (
+              "›"
+            ) : (
+              <AppIcon name="next" color={colors.muted} size={18} />
+            )
           ) : undefined
         }
       >

@@ -11,7 +11,7 @@
       "bundleIdentifier": "tw.org.alive.hhcapp"
     },
     "android": {
-      "predictiveBackGestureEnabled": false,
+      "predictiveBackGestureEnabled": true,
       "package": "tw.org.alive.hhcapp",
       "icon": "./assets/hhc-app-icon.png"
     },

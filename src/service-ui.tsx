@@ -100,8 +100,10 @@ export function Action({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}
+      android_ripple={{ color: secondary || quiet ? colors.line : "#ffffff33" }}
       style={({ pressed }) => [
         s.action,
+        Platform.OS === "android" && { borderRadius: 28, overflow: "hidden" },
         {
           backgroundColor: quiet
             ? "transparent"
@@ -468,12 +470,12 @@ export function ReplacementActions({
           {failure}
         </Text>
       ) : null}
-      <Host colorScheme={colors.scheme}>
+      <Host colorScheme={colors.scheme} seedColor={colors.primary}>
         <BottomSheet
           isPresented={step !== null}
-          onDismiss={() => {
-            if (!submitting) setStep(null);
-          }}
+          onDismiss={() => setStep(null)}
+          shouldDismissOnBackPress={!submitting}
+          shouldDismissOnClickOutside={!submitting}
           snapPoints={
             compactWebSheet
               ? undefined

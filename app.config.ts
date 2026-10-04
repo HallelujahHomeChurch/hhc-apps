@@ -14,6 +14,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   }
   return {
     ...config,
+    android: {
+      ...config.android,
+      package:
+        process.env.EXPO_PUBLIC_DEMO === "true"
+          ? "tw.org.alive.hhcapp.demo"
+          : config.android?.package,
+    },
     name: config.name || "HHC 教會",
     slug: config.slug || "hhc-app",
     extra: {
