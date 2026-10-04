@@ -23,6 +23,11 @@ const cities: Record<string, string> = {
 export function zoneLabel(zone: string) {
   return cities[zone] || zone.split("/").at(-1)!.replaceAll("_", " ");
 }
+export function matchesZone(zone: string, query: string) {
+  const normalize = (value: string) =>
+    value.toLowerCase().replace(/[\s_/-]+/g, "");
+  return normalize(`${zoneLabel(zone)} ${zone}`).includes(normalize(query));
+}
 export function zoneOptions(current: string) {
   return [
     ...new Set([
@@ -35,11 +40,6 @@ export function zoneOptions(current: string) {
 }
 export function dayLabel(days: number) {
   return days === 0 ? "當天" : days === 1 ? "前一天" : `提前 ${days} 天`;
-}
-export function reminderSummary(p: Preference) {
-  return p.enabled
-    ? `${dayLabel(p.leadDays)} ${p.localTime}・${zoneLabel(p.timeZone)}時間`
-    : "提醒已關閉";
 }
 export function formatDate(iso: string, zone: string) {
   return new Intl.DateTimeFormat("zh-TW", {

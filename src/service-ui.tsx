@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -47,6 +49,27 @@ export function AppIcon({
     />
   ) : (
     <MaterialIcons name={icons[name][1]} color={color} size={size} />
+  );
+}
+export function Brand({ color }: { color: string }) {
+  return (
+    <View
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel="HHC"
+      style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
+    >
+      <Image
+        source={require("../assets/hhc-logo.png")}
+        accessible={false}
+        style={{ width: 28, height: 28 }}
+      />
+      <Text
+        style={{ color, fontSize: 18, fontWeight: "700", letterSpacing: 0.5 }}
+      >
+        HHC
+      </Text>
+    </View>
   );
 }
 export function Action({
@@ -133,16 +156,17 @@ export function EmptyState({
   colors,
 }: {
   title: string;
-  description: string;
+  description?: string;
   colors: Palette;
 }) {
   return (
     <View style={{ paddingVertical: space.page, gap: space.sm }}>
-      <AppIcon name="check" color={colors.muted} size={28} />
       <Text style={[type.body, { color: colors.text, fontWeight: "600" }]}>
         {title}
       </Text>
-      <Text style={[type.small, { color: colors.muted }]}>{description}</Text>
+      {description && (
+        <Text style={[type.small, { color: colors.muted }]}>{description}</Text>
+      )}
     </View>
   );
 }
@@ -163,12 +187,14 @@ export function AssignmentRow({
   zone,
   onPress,
   viewerId,
+  showAssignee = true,
 }: {
   assignment: Assignment;
   colors: Palette;
   zone: string;
   onPress: () => void;
   viewerId?: string;
+  showAssignee?: boolean;
 }) {
   const d = parts(a.startsAt, zone);
   const status = a.cancelled
@@ -209,18 +235,11 @@ export function AssignmentRow({
         <Text style={[type.small, { color: colors.muted }]}>
           {d.time} · {a.meetingName}
         </Text>
-        <View
-          style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}
-        >
-          <View style={[s.avatar, { backgroundColor: colors.soft }]}>
-            <Text style={[type.caption, { color: colors.primary }]}>
-              {a.assigneeName?.slice(0, 1) || "—"}
-            </Text>
-          </View>
+        {showAssignee && (
           <Text style={[type.small, { color: colors.muted }]}>
             {a.assigneeName || (a.assigneeMemberId ? "已安排同工" : "待補人選")}
           </Text>
-        </View>
+        )}
         {status ? (
           <Text
             style={[
@@ -341,6 +360,9 @@ export function ReplacementActions({
     setFailure("");
   }, [assignment.id]);
   const active = assignment.request?.status === "active";
+  // Web's snap-point drawer keeps full-viewport content below a half-height sheet.
+  // Let short web sheets fit their content; native sheets retain system detents.
+  const compactWebSheet = Platform.OS === "web" && step !== "person";
   const owner = memberId === assignment.assigneeMemberId;
   const peers = candidates.filter(
     (c) =>
@@ -385,28 +407,17 @@ export function ReplacementActions({
             </View>
           ) : null}
           <Action
-            title={active ? "更換代班方式" : "找代班"}
+            title={active ? "管理代班" : "找代班"}
             secondary={active}
             onPress={() => setStep("choose")}
             colors={colors}
             disabled={busy}
           />
-          {active ? (
-            <Action
-              title="撤回代班請求"
-              quiet
-              onPress={() => void send("withdraw", requestExtra)}
-              colors={colors}
-              disabled={busy}
-            />
-          ) : null}
-          <Action
-            title={assignment.helpOpen ? "負責人協助中" : "請負責人協助"}
-            quiet
-            onPress={() => void send("help")}
-            colors={colors}
-            disabled={busy || assignment.helpOpen}
-          />
+          {assignment.helpOpen && (
+            <Text style={[type.small, { color: colors.muted }]}>
+              負責人協助中
+            </Text>
+          )}
         </>
       ) : active &&
         (assignment.request!.mode === "open" ||
@@ -449,11 +460,17 @@ export function ReplacementActions({
           onDismiss={() => {
             if (!submitting) setStep(null);
           }}
-          snapPoints={step === "person" ? ["full"] : ["half", "full"]}
+          snapPoints={
+            compactWebSheet
+              ? undefined
+              : step === "person"
+                ? ["full"]
+                : ["half", "full"]
+          }
           containerColor={colors.surface}
           contentPadding={0}
         >
-          <RNHostView>
+          <RNHostView matchContents={compactWebSheet} style={{ width: "100%" }}>
             <View style={{ flex: 1, padding: space.page, gap: space.lg }}>
               <View style={s.sheetHeader}>
                 {step !== "choose" && (
@@ -478,7 +495,9 @@ export function ReplacementActions({
                     ? "邀請同工"
                     : step === "open"
                       ? "團契徵求"
-                      : "找代班"}
+                      : active
+                        ? "管理代班"
+                        : "找代班"}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -506,11 +525,17 @@ export function ReplacementActions({
                 </View>
               )}
               {step === "choose" ? (
-                <>
+                <ScrollView
+                  contentContainerStyle={{
+                    gap: space.lg,
+                    paddingBottom: space.page,
+                  }}
+                >
                   {(["person", "open"] as const).map((mode) => (
                     <Pressable
                       key={mode}
                       accessibilityRole="button"
+                      disabled={busy || submitting}
                       onPress={() => setStep(mode)}
                       style={({ pressed }) => [
                         s.choice,
@@ -540,7 +565,25 @@ export function ReplacementActions({
                       <AppIcon name="next" color={colors.muted} />
                     </Pressable>
                   ))}
-                </>
+                  <Action
+                    title={
+                      assignment.helpOpen ? "負責人協助中" : "請負責人協助"
+                    }
+                    quiet
+                    colors={colors}
+                    disabled={busy || submitting || assignment.helpOpen}
+                    onPress={() => void send("help")}
+                  />
+                  {active && (
+                    <Action
+                      title="撤回代班請求"
+                      quiet
+                      colors={colors}
+                      disabled={busy || submitting}
+                      onPress={() => void send("withdraw", requestExtra)}
+                    />
+                  )}
+                </ScrollView>
               ) : step === "person" ? (
                 <>
                   <View style={[s.search, { backgroundColor: colors.canvas }]}>
@@ -620,7 +663,12 @@ export function ReplacementActions({
                   />
                 </>
               ) : step === "open" ? (
-                <>
+                <ScrollView
+                  contentContainerStyle={{
+                    gap: space.lg,
+                    paddingBottom: space.page,
+                  }}
+                >
                   <Text style={[type.body, { color: colors.muted }]}>
                     向{assignment.teamName}徵求，第一位接受者承接。
                   </Text>
@@ -639,7 +687,7 @@ export function ReplacementActions({
                       })
                     }
                   />
-                </>
+                </ScrollView>
               ) : null}
               {failure ? (
                 <Text
@@ -681,13 +729,6 @@ const s = StyleSheet.create({
     paddingVertical: space.sm,
     borderRadius: 14,
     borderCurve: "continuous",
-  },
-  avatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
   },
   day: {
     fontSize: 28,

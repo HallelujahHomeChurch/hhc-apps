@@ -4,7 +4,7 @@ import {
   clockValue,
   formatDate,
   formatRange,
-  reminderSummary,
+  matchesZone,
   validPreference,
   zoneOptions,
 } from "./presentation";
@@ -20,7 +20,18 @@ describe("reminder controls and timezone presentation", () => {
   it("preserves the selected wall clock, including midnight and minute precision", () => {
     for (const time of ["00:00", "08:05", "20:00", "23:59"])
       expect(clockValue(clockDate(time))).toBe(time);
-    expect(reminderSummary(preference)).toBe("前一天 20:00・台北時間");
+  });
+  it("finds cities using familiar names as well as IANA identifiers", () => {
+    for (const query of [
+      "紐約",
+      "New York",
+      "NEW_YORK",
+      "America/New_York",
+      "new-york",
+    ])
+      expect(matchesZone("America/New_York", query)).toBe(true);
+    expect(matchesZone("America/New_York", "Tokyo")).toBe(false);
+    expect(matchesZone("Pacific/Chatham", "chatham")).toBe(true);
   });
   it("retains uncommon saved zones and rejects invalid settings", () => {
     expect(zoneOptions("Pacific/Chatham")).toContain("Pacific/Chatham");

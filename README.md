@@ -12,12 +12,17 @@ npm ci
 npm run demo:web
 ```
 
-Open `http://localhost:5199` (stop any static preview already using that port first).
+Open `http://localhost:5200` (stop any static preview already using that port first).
 Preview screens use production UI and copy, without demo-only notices. Data and
 notification-permission state are simulated: no real accounts, server mutations
 or push delivery. The demo transport never
 uses the network. Reload resets its sample state. This preview is for layout
 and interaction review, not acceptance of authentication or native notifications.
+
+The home header uses the existing HHC website logo. Pull down from the top of a
+list to refresh; native builds use the system control and the touch web preview
+has the same pull/release interaction. Normal screens have no refresh button.
+The foreground app also refreshes automatically when roster data expires.
 
 For a real test environment, copy `.env.example` to `.env.local`, set the public
 Account/API origins and the registered native client id, then run `npm start`.
@@ -26,7 +31,7 @@ Use a development/internal native build for push testing, not a web preview.
 
 ## Architecture
 
-The UI refinement branch is `feat/mobile-layout-20261004`, in a separate worktree
+The UI refinement branch is `feat/mobile-interaction-20261004`, in a separate worktree
 from the original MVP. See [UI review](docs/ui-review.md) for design decisions,
 verified interactions and the remaining native-device checks.
 

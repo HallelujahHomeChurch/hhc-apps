@@ -20,7 +20,7 @@ import { useService } from "./service-state";
 import { Action, AppIcon, SectionTitle } from "./service-ui";
 import {
   dayLabel,
-  reminderSummary,
+  matchesZone,
   validPreference,
   zoneLabel,
   zoneOptions,
@@ -87,22 +87,6 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
   };
   return (
     <View style={{ gap: space.lg }}>
-      <View
-        style={{
-          backgroundColor: colors.feature,
-          borderRadius: 24,
-          padding: space.page,
-          gap: space.sm,
-        }}
-      >
-        <AppIcon name="clock" color={colors.featureAccent} size={26} />
-        <Text style={[type.heading, { color: colors.featureText }]}>
-          {reminderSummary(draft)}
-        </Text>
-        <Text style={[type.caption, { color: colors.featureMuted }]}>
-          {dirty ? "尚未儲存" : "個人服事提醒"}
-        </Text>
-      </View>
       <View
         style={{
           backgroundColor: colors.surface,
@@ -199,8 +183,11 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
       </View>
       {dirty && (
         <>
-          <Text style={[type.caption, { color: colors.muted }]}>
-            所有裝置共用；旅行時仍依選定時區提醒。
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[type.caption, { color: colors.muted }]}
+          >
+            尚未儲存
           </Text>
           <Action
             title="儲存提醒"
@@ -240,7 +227,9 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
         <SettingsRow
           title="手機通知"
           value={permission}
-          onPress={() => void enablePush()}
+          onPress={
+            permission === "已啟用" ? undefined : () => void enablePush()
+          }
           colors={colors}
         />
       </View>
@@ -292,6 +281,11 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
                   <AppIcon name="close" color={colors.muted} />
                 </Pressable>
               </View>
+              {zoneFor === "reminder" && (
+                <Text style={[type.small, { color: colors.muted }]}>
+                  所有裝置共用；旅行時仍依選定時區提醒。
+                </Text>
+              )}
               <TextInput
                 accessibilityLabel="搜尋城市或時區"
                 placeholder="搜尋城市或時區"
@@ -314,11 +308,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
                 style={{ flex: 1 }}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
-                data={zones.filter((z) =>
-                  `${zoneLabel(z)} ${z}`
-                    .toLowerCase()
-                    .includes(query.trim().toLowerCase()),
-                )}
+                data={zones.filter((z) => matchesZone(z, query))}
                 keyExtractor={(z) => z}
                 ListEmptyComponent={
                   <Text style={[type.body, { color: colors.muted }]}>
@@ -376,14 +366,15 @@ function SettingsRow({
 }: {
   title: string;
   value: string;
-  onPress: () => void;
+  onPress?: () => void;
   colors: Palette;
 }) {
   if (Platform.OS === "web")
     return (
       <Pressable
-        accessibilityRole="button"
+        accessibilityRole={onPress ? "button" : undefined}
         accessibilityLabel={`${title}，${value}`}
+        disabled={!onPress}
         onPress={onPress}
         style={{
           minHeight: 56,
@@ -396,7 +387,7 @@ function SettingsRow({
           <Text style={[type.body, { color: colors.text }]}>{title}</Text>
           <Text style={[type.small, { color: colors.muted }]}>{value}</Text>
         </View>
-        <AppIcon name="next" color={colors.muted} size={18} />
+        {onPress && <AppIcon name="next" color={colors.muted} size={18} />}
       </Pressable>
     );
   return (
@@ -408,7 +399,11 @@ function SettingsRow({
       <ListItem
         onPress={onPress}
         supportingText={value}
-        trailing={<AppIcon name="next" color={colors.muted} size={18} />}
+        trailing={
+          onPress ? (
+            <AppIcon name="next" color={colors.muted} size={18} />
+          ) : undefined
+        }
       >
         {title}
       </ListItem>

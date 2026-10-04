@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, useColorScheme } from "react-native";
+import { useColorScheme } from "react-native";
 import {
   Stack,
   ThemeProvider,
@@ -9,10 +9,10 @@ import {
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ServiceProvider, useService } from "../service-state";
-import { AppIcon } from "../service-ui";
+import { Brand } from "../service-ui";
 export const unstable_settings = { anchor: "(tabs)" };
 function Navigation() {
-  const { colors, signed, busy, refresh } = useService();
+  const { colors, signed } = useService();
   const path = usePathname();
   const title = !signed
     ? ""
@@ -22,7 +22,7 @@ function Navigation() {
         ? "通知"
         : path === "/profile"
           ? "我的"
-          : "哈利路亞家教會";
+          : "HHC";
   const theme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
   return (
     <ThemeProvider
@@ -59,24 +59,10 @@ function Navigation() {
           options={{
             title,
             headerLargeTitle: false,
-            headerRight: signed
-              ? () => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="重新整理"
-                    disabled={busy}
-                    onPress={() => void refresh()}
-                    style={{
-                      minWidth: 48,
-                      minHeight: 48,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <AppIcon name="refresh" color={colors.muted} />
-                  </Pressable>
-                )
-              : undefined,
+            headerTitle:
+              signed && path === "/"
+                ? () => <Brand color={colors.text} />
+                : undefined,
           }}
         />
         <Stack.Screen

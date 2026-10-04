@@ -4,7 +4,6 @@ import {
   FlatList,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   type ScrollViewProps,
   Text,
@@ -21,12 +20,14 @@ import { useService } from "./service-state";
 import {
   Action,
   AppIcon,
+  Brand,
   AssignmentRow,
   EmptyState,
   NextService,
   ReplacementActions,
   SectionTitle,
 } from "./service-ui";
+import { PullToRefresh } from "./pull-to-refresh";
 import { ReminderSettings } from "./reminder-settings";
 import { formatDate, formatRange, zoneLabel } from "./presentation";
 import { space, type } from "./theme";
@@ -103,9 +104,7 @@ export function LoginScreen() {
         backgroundColor: colors.canvas,
       }}
     >
-      <Text style={[type.small, { color: colors.primary, fontWeight: "600" }]}>
-        HHC / 哈利路亞家教會
-      </Text>
+      <Brand color={colors.text} />
       <Text style={[type.title, { color: colors.text }]}>一起服事</Text>
       <Text style={[type.body, { color: colors.muted }]}>
         班表、代班與提醒，在這裡。
@@ -192,6 +191,7 @@ export function TabScreen({ tab }: { tab: Tab }) {
       colors={colors}
       zone={displayZone}
       viewerId={teams.find((t) => t.id === a.teamId)?.memberId}
+      showAssignee={(tab === "service" && rosterMode === "team") || !isMine(a)}
       onPress={() => open(a.id)}
     />
   );
@@ -209,15 +209,16 @@ export function TabScreen({ tab }: { tab: Tab }) {
     "aria-hidden": !focused,
     contentInsetAdjustmentBehavior: "automatic",
     keyboardShouldPersistTaps: "handled",
+    alwaysBounceVertical: true,
     contentContainerStyle: {
       paddingHorizontal: space.page,
       paddingTop: space.md,
       paddingBottom: space.xxl,
     },
     refreshControl: (
-      <RefreshControl
-        refreshing={busy}
-        onRefresh={() => void refresh()}
+      <PullToRefresh
+        onRefresh={refresh}
+        enabled={!busy}
         tintColor={colors.primary}
       />
     ),
@@ -246,11 +247,15 @@ export function TabScreen({ tab }: { tab: Tab }) {
             updated &&
             windowReady &&
             !error && (
-              <EmptyState
-                title="目前沒有即將到來的服事"
-                description="到服事頁查看團契班表。"
-                colors={colors}
-              />
+              <>
+                <EmptyState title="目前沒有即將到來的服事" colors={colors} />
+                <Action
+                  title="查看班表"
+                  secondary
+                  colors={colors}
+                  onPress={() => router.navigate("/service")}
+                />
+              </>
             )
           )}
           {!!invitations.length && (
@@ -268,23 +273,6 @@ export function TabScreen({ tab }: { tab: Tab }) {
               <View style={group}>{mine.slice(1, 4).map(row)}</View>
             </>
           )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate("/service")}
-            style={{
-              minHeight: 48,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Text
-              style={[type.body, { color: colors.primary, fontWeight: "600" }]}
-            >
-              完整班表
-            </Text>
-            <AppIcon name="next" color={colors.primary} />
-          </Pressable>
         </>
       )}
       {tab === "service" && (
@@ -413,15 +401,13 @@ export function TabScreen({ tab }: { tab: Tab }) {
               <AppIcon name="next" color={colors.primary} />
             </Pressable>
           </View>
-          <Text style={[type.caption, { color: colors.muted }]}>
-            {zoneLabel(displayZone)}時間
-          </Text>
+          {roster.some((a) => a.timeZone !== displayZone) && (
+            <Text style={[type.caption, { color: colors.muted }]}>
+              {zoneLabel(displayZone)}時間
+            </Text>
+          )}
           {updated && windowReady && !busy && !error && !roster.length && (
-            <EmptyState
-              title="這段時間沒有安排"
-              description="切換日期，查看其他服事。"
-              colors={colors}
-            />
+            <EmptyState title="這段時間沒有安排" colors={colors} />
           )}
         </>
       )}
@@ -530,6 +516,7 @@ export function AssignmentScreen() {
     closeDetail,
     command,
     updated,
+    refresh,
   } = state;
   const dataReady = Boolean(updated);
   useFocusEffect(
@@ -556,6 +543,14 @@ export function AssignmentScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.canvas }}
+      alwaysBounceVertical
+      refreshControl={
+        <PullToRefresh
+          onRefresh={refresh}
+          enabled={!busy}
+          tintColor={colors.primary}
+        />
+      }
       keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{

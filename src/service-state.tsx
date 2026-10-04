@@ -69,7 +69,7 @@ function useServiceState() {
   const detailLoad = useRef(0);
   const [loadedWindow, setLoadedWindow] = useState(0);
   const [windowStart, setWindowStart] = useState(Date.now());
-  const clear = useCallback(() => {
+  const clear = useCallback((keepPreference = false) => {
     generation.current++;
     detailLoad.current++;
     setItems([]);
@@ -77,7 +77,7 @@ function useServiceState() {
     setCandidates([]);
     setNotices([]);
     setTeams([]);
-    setPref(null);
+    if (!keepPreference) setPref(null);
     setUpdated(null);
     setBusy(false);
     detailID.current = null;
@@ -238,8 +238,9 @@ function useServiceState() {
   useEffect(() => {
     const timer = setInterval(() => {
       if (loadedAt.current && performance.now() - loadedAt.current >= 300000) {
-        clear();
-        setError("班表快取已過期，請連線後重新整理。");
+        // Expire roster data without unmounting an in-progress settings draft.
+        clear(true);
+        if (signed && AppState.currentState === "active") void refresh();
       }
     }, 1000);
     const listener = AppState.addEventListener("change", (state) => {

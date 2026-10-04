@@ -1,35 +1,60 @@
-# Mobile compact-layout revision — 2026-10-04
+# Mobile interaction and component review — 2026-10-04
 
-Branch: `feat/mobile-layout-20261004`.
-Worktree: `apps/.worktrees/mobile-layout-20261004`.
-Preview: http://localhost:5199 (synthetic transport; reload resets data).
+Branch: `feat/mobile-interaction-20261004`.
+Worktree: `apps/.worktrees/mobile-interaction-20261004`.
+Preview: http://localhost:5200.
 
-## Current layout revision
+## Acceptance criteria
 
-- Reference Flighty's prioritization of the next event and Things' clear task
-  groups, rather than reproducing every element of either app. Their official
-  screenshots and design explanations were reviewed.
-- Replace the large page title with a compact 17pt navigation title. Home uses
-  the church name once in navigation; the repeated brand line is removed.
-  Other destinations retain a small location label and refresh action.
-- Task titles use 26/34pt instead of 32/42pt. Keep the date prominent and the
-  existing slate/rose palette, labeled native tabs and task grouping.
-- Remove demo-only copy from every tab. Simulated notification activation uses
-  the same enabled state as production. No preview labels or banners are rendered;
-  the synthetic transport and build guards remain unchanged.
-- Keep operational information such as offline state, conflicts, timezones and
-  a reminder that would occur after its event. Those affect real decisions.
+A component must identify location, present information needed for a decision,
+perform an available action, or communicate a meaningful state. Routine work
+should happen automatically. Use platform gestures for direct manipulation;
+keep explicit controls where discovery, accessibility or responsibility requires
+them. Do not make users interpret implementation details or read instructions
+that repeat what the layout already communicates.
 
-### Current validation
+## Whole-screen review
 
-- TypeScript, all 11 tests and production iOS/Android/web exports pass; the
-  separate preview export passes. No dependencies were changed.
-- Browser checks: all four tabs, detail opening/back, simulated notification
-  activation, 390px light/dark and 320px dark screenshots. The home header is
-  17px, the 320px viewport has no horizontal overflow, and demo-only notices
-  are absent. Long assignment names wrap instead of truncating.
-- Earlier feature checks below describe the carried-forward native-navigation
-  revision; device acceptance remains open.
+| Surface / component | Decision and implementation |
+| --- | --- |
+| Home identity | Existing `hhc-web/public/assets/brand/logo.png` at 28pt + HHC; same identity on login. |
+| Header refresh | Remove from all tabs. Native system pull-to-refresh on lists and detail; touch preview implements pull, release threshold, cancellation and pending state. |
+| Automatic refresh | Retain foreground refresh; expire roster data and refresh automatically while active. Keep an editing preference draft mounted; logout/authorization clears still remove it. |
+| Loading | Pull indicator belongs only to that pull, not other commands. Initial loading and contextual failures retain their own feedback. |
+| Home next service | Keep event, date, time and fellowship as the immediate task. Card opens detail. |
+| Home next tasks | Remove duplicate self identity and initial-letter avatars. Keep other assignees for invitations and team roster. |
+| Home navigation | Remove permanent full-roster link duplicating the tab. Empty home alone has an actionable view-roster link. |
+| Empty states | Remove generic success/check decoration and instructions to use adjacent date controls. Keep short state labels. |
+| Roster filters | Keep mine/team distinction, actual date range and date controls; show team selector only when there is a choice. Keep timezone label when events differ from display zone. |
+| Notifications | Keep unread state and event/date context; tapping opens detail and marks read. No extra action toolbar. |
+| Detail | Keep task/date/location/timezone/responsibility and conditional conflicts or cancellation. One primary replacement entry for the owner. |
+| Replacement actions | Move help and withdrawal into find/manage replacement. Keep accept/decline visible to the recipient; keep responsibility consequences where committing. |
+| Sheets | Keep explicit back/close alongside native dismissal for discovery and keyboard/accessibility. Choices and confirmation can scroll; full-height person search retains its own virtualized list. Short web sheets fit content to avoid the library's half-detent clipping. |
+| Reminder settings | Remove oversized summary card that duplicates editable fields. Keep enable toggle and conditional date/time/zone fields. |
+| Saving settings | Save action and unsaved state only after edits. Explicit save is retained because reminders apply across devices; preserve drafts through refresh/failure. |
+| Timezones | Keep display and reminder zones independent. Put travel/shared-setting explanation inside reminder-zone selection, where it informs the choice. Search accepts natural city spacing as well as IANA identifiers. |
+| Phone notifications | Enabled is a static status, without an action chevron that merely repeats registration. Non-enabled states retain an activation/retry action. |
+| Tabs | Keep four destinations, labels and unread badge. Labels prevent guessing unfamiliar icons. Native iOS navigation remains system-rendered. |
+| Errors | Retain retry only in failure/offline feedback, plus conflict and ownership consequences. No permanent operational notice. |
+
+## Validation for this revision
+
+- TypeScript and 13 tests, including Android refresh-wrapper child/layout propagation
+  and city searches using spaces, underscores, Chinese names and IANA ids.
+- Production iOS/Android/web and separate preview exports.
+- Repeatable browser touch regression: `scripts/check-pull-refresh.mjs`.
+  Uses an existing Ego task space, synthetic response fault injection and CDP
+  touch events. See script header for invocation.
+- Touch regression passed: short/cancelled/horizontal pulls, threshold, pending
+  request deduplication, starting away from the top, no accidental card opening,
+  failure/retry, preserving drafts through pull and automatic expiry refresh.
+- Browser flows passed: public replacement request, withdrawal, responsible-person
+  help, invitation acceptance/read state, team roster/future empty state, reminder
+  save and New York city search with independent display timezone.
+- Visual checks: 390px light, 320px dark home/roster, compact settings, and short
+  replacement sheet with its final action completely inside the viewport.
+- Native runtime/device acceptance is still outstanding; bundles and the Android
+  wrapper contract check do not prove physical gesture or Liquid Glass fidelity.
 
 ## Design contract
 
@@ -40,7 +65,7 @@ A task should be understandable without reading repeated explanatory paragraphs.
 Keep decision consequences, responsibility, conflicts and offline limitations at
 the point where they matter. Do not remove labels in pursuit of visual minimalism.
 
-## Implemented
+## Carried-forward native-navigation implementation
 
 - Expo Router SDK 57 native tabs on iOS/Android; four labeled destinations and an
   unread notification badge. iOS delegates material and selection rendering to
@@ -104,6 +129,8 @@ was performed; earlier worktrees and previews remain available.
 
 ## References
 
+- https://reactnative.dev/docs/refreshcontrol
+- Installed React Native ScrollView and React Native Web RefreshControl implementations.
 - https://developer.apple.com/news/?id=970ncww4
 - https://culturedcode.com/things/features/
 - https://docs.expo.dev/versions/v57.0.0/sdk/router/native-tabs/
