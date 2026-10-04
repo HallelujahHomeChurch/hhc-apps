@@ -1,6 +1,11 @@
-// sed 's/TASK_SPACE_ID/110/g' scripts/check-initialization.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/111/g' scripts/check-initialization.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const p = (await taskSpace(Number("TASK_SPACE_ID"))).page("p1");
+await p.goto("http://localhost:5202/profile");
+if (await p.evaluate(() => !!document.querySelector('[aria-label="登出"]'))) {
+  await p.click('loc=role:button[name="登出"]');
+  await p.waitForSelector('loc=role:button[name="使用教會帳號登入"]');
+}
 const script = await p.cdp("Page.addScriptToEvaluateOnNewDocument", {
   source: `const uuid = crypto.randomUUID.bind(crypto);
     crypto.randomUUID = () => {
@@ -9,7 +14,7 @@ const script = await p.cdp("Page.addScriptToEvaluateOnNewDocument", {
     };`,
 });
 try {
-  await p.goto("http://localhost:5201/");
+  await p.goto("http://localhost:5202/");
   await p.waitForSelector('loc=role:button[name="重試"]');
   assert.ok(
     await p.evaluate(() =>
@@ -23,7 +28,7 @@ try {
     0,
   );
   await p.click('loc=role:button[name="重試"]');
-  await p.waitForSelector('loc=role:button[name*="下一次服事"]');
+  await p.waitForSelector('loc=role:button[name="使用教會帳號登入"]');
   console.log(
     "PASS: initialization failure stops the spinner and retry recovers the session",
   );

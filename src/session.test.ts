@@ -70,3 +70,52 @@ describe("session recovery", () => {
     expect(value).toBeNull();
   });
 });
+
+describe("explicit login lifecycle", () => {
+  function fresh(failSave = false) {
+    let stored: string | null = null;
+    const storage = {
+      get: async () => stored,
+      set: async (value: string) => {
+        if (failSave) throw new Error("storage_unavailable");
+        stored = value;
+      },
+      clear: async () => {
+        stored = null;
+      },
+    };
+    const create = () =>
+      new Sessions(
+        storage,
+        "https://account.test/token",
+        "hhc-app",
+        "device",
+        async () => new Response(JSON.stringify(token)),
+      );
+    return { create, stored: () => stored };
+  }
+  it("requires sign-in, restores a saved session, and stays signed out after logout", async () => {
+    const { create, stored } = fresh();
+    const session = create();
+    await session.restore();
+    expect(session.current).toBeNull();
+    await expect(session.access()).rejects.toThrow("login_required");
+    await session.finish("code", "verifier", "hhc-app://auth/account");
+    const restored = create();
+    await restored.restore();
+    expect(await restored.access()).toBe("access");
+    await restored.signOut();
+    expect(stored()).toBeNull();
+    const reopened = create();
+    await reopened.restore();
+    expect(reopened.current).toBeNull();
+  });
+  it("does not authenticate when storing the credentials fails", async () => {
+    const { create } = fresh(true);
+    const session = create();
+    await expect(
+      session.finish("code", "verifier", "hhc-app://auth/account"),
+    ).rejects.toThrow("storage_unavailable");
+    expect(session.current).toBeNull();
+  });
+});

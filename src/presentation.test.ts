@@ -70,5 +70,6 @@ describe("existing notification and OAuth links", () => {
       systemPath("hhc-app://auth/account?code=not-a-real-code&state=abc"),
     ).toBe("/");
     expect(systemPath(`/assignment/${id}`)).toBe(`/assignment/${id}`);
+    expect(systemPath(`hhc-app://assignment/${id}`)).toBe(`/assignment/${id}`);
   });
 });

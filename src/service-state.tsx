@@ -13,9 +13,11 @@ import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Notifications from "expo-notifications";
+import * as Linking from "expo-linking";
+import { systemPath } from "./navigation";
 import { useAppearance } from "./use-appearance";
 import { light, dark } from "./theme";
-import { demoEnabled, demoFetch, demoSession } from "./demo";
+import { demoEnabled, demoFetch, demoTokenFetch } from "./demo";
 import { registerPush, revokePush } from "./push";
 import { Sessions } from "./session";
 import {
@@ -38,6 +40,7 @@ type API = ReturnType<typeof serviceAPI>;
 function useServiceState() {
   const router = useRouter();
   const pathname = usePathname();
+  const pendingAssignment = useRef<string | null>(null);
   const { mode, toggleAppearance } = useAppearance();
   const colors = mode === "dark" ? dark : light;
   const [session, setSession] = useState<Sessions | null>(null);
@@ -45,6 +48,39 @@ function useServiceState() {
   const [initializationError, setInitializationError] = useState("");
   const [stale, setStale] = useState(false);
   const [signed, setSigned] = useState(false);
+  const signedRef = useRef(false);
+  signedRef.current = signed;
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    // Native protected routes reject warm links before usePathname can observe them.
+    const remember = (url: string) => {
+      if (signedRef.current) return;
+      const id = systemPath(url).match(/^\/assignment\/([0-9a-f-]{36})$/i)?.[1];
+      if (id) pendingAssignment.current = id;
+    };
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (url) remember(url);
+      })
+      .catch(() => {});
+    const listener = Linking.addEventListener("url", ({ url }) =>
+      remember(url),
+    );
+    return () => listener.remove();
+  }, []);
+  // Retain assignment links across the signed-out route guard; never accept external redirects.
+  const linkedAssignment = pathname.match(
+    /^\/assignment\/([0-9a-f-]{36})$/i,
+  )?.[1];
+  if (!signed && linkedAssignment) pendingAssignment.current = linkedAssignment;
+  useEffect(() => {
+    if (signed && pendingAssignment.current) {
+      const id = pendingAssignment.current;
+      pendingAssignment.current = null;
+      if (pathname !== `/assignment/${id}`)
+        router.push({ pathname: "/assignment/[id]", params: { id } });
+    }
+  }, [signed, router, pathname]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamID, setTeamID] = useState("");
   const [items, setItems] = useState<Assignment[]>([]);
@@ -100,25 +136,37 @@ function useServiceState() {
         if (Platform.OS !== "web")
           await SecureStore.setItemAsync("device-id", device);
       }
-      let webValue: string | null = demoEnabled ? demoSession : null;
+      let webValue: string | null = null;
+      const key = demoEnabled ? "demo-session" : "session";
       const s = new Sessions(
         {
           get: () =>
-            Platform.OS === "web" || demoEnabled
-              ? Promise.resolve(webValue)
-              : SecureStore.getItemAsync("session"),
+            Platform.OS === "web"
+              ? Promise.resolve(
+                  demoEnabled ? window.sessionStorage.getItem(key) : webValue,
+                )
+              : SecureStore.getItemAsync(key),
           set: (v) =>
-            Platform.OS === "web" || demoEnabled
-              ? Promise.resolve(void (webValue = v))
-              : SecureStore.setItemAsync("session", v),
+            Platform.OS === "web"
+              ? Promise.resolve(
+                  demoEnabled
+                    ? window.sessionStorage.setItem(key, v)
+                    : void (webValue = v),
+                )
+              : SecureStore.setItemAsync(key, v),
           clear: () =>
-            Platform.OS === "web" || demoEnabled
-              ? Promise.resolve(void (webValue = null))
-              : SecureStore.deleteItemAsync("session"),
+            Platform.OS === "web"
+              ? Promise.resolve(
+                  demoEnabled
+                    ? window.sessionStorage.removeItem(key)
+                    : void (webValue = null),
+                )
+              : SecureStore.deleteItemAsync(key),
         },
         authBase + "/oauth/token",
         clientID,
         device,
+        demoEnabled ? demoTokenFetch : fetch,
       );
       await s.restore();
       if (!alive) return;
@@ -264,7 +312,7 @@ function useServiceState() {
     };
   }, [clear, refresh, signed]);
   useEffect(() => {
-    if (Platform.OS === "web" || demoEnabled) return;
+    if (!session || Platform.OS === "web" || demoEnabled) return;
     const handle = (r: Notifications.NotificationResponse | null) => {
       const d = r?.notification.request.content.data;
       if (
@@ -272,6 +320,7 @@ function useServiceState() {
         typeof d.assignmentId === "string" &&
         /^[0-9a-f-]{36}$/i.test(d.assignmentId)
       ) {
+        if (!signedRef.current) pendingAssignment.current = d.assignmentId;
         router.navigate({
           pathname: "/assignment/[id]",
           params: { id: d.assignmentId },
@@ -284,13 +333,23 @@ function useServiceState() {
     const listener =
       Notifications.addNotificationResponseReceivedListener(handle);
     return () => listener.remove();
-  }, [router]);
+  }, [router, session]);
   async function login() {
-    if (!session || !ready) return;
-    const destination = pathname.match(/^\/assignment\/([0-9a-f-]{36})$/i)?.[1];
+    if (!session || (!ready && !demoEnabled) || submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
+      if (demoEnabled) {
+        await session.finish(
+          "local-preview",
+          "local-preview",
+          "hhc-app://auth/account",
+        );
+        clear();
+        setSigned(true);
+        return;
+      }
       const redirectUri = AuthSession.makeRedirectUri({
         scheme: "hhc-app",
         path: "auth/account",
@@ -317,15 +376,11 @@ function useServiceState() {
         );
         clear();
         setSigned(true);
-        if (destination)
-          router.replace({
-            pathname: "/assignment/[id]",
-            params: { id: destination },
-          });
       } else if (result.type === "error") setError("登入未完成，請重試。");
     } catch (e) {
       setError(message(e));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -446,7 +501,7 @@ function useServiceState() {
       setInitializationAttempt((attempt) => attempt + 1);
     },
     signed,
-    ready,
+    ready: ready || demoEnabled,
     stale,
     teams,
     teamID,

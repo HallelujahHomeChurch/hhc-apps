@@ -17,7 +17,10 @@ npm run ios:demo
 
 `ios:demo` builds the native app with local synthetic data. No backend mutation
 or push registration occurs in that mode. The screens and interactions are the
-same components as production. The existing signed EAS build guard rejects a
+same components as production. It now starts at the login screen; tapping
+「使用教會帳號登入」establishes a local synthetic session. That session uses a
+separate `demo-session` storage key; logout returns to the login screen. Production
+uses the existing account OAuth/PKCE flow and never that local exchange. The existing signed EAS build guard rejects a
 synthetic build; do not use this command for distribution.
 
 For the configured backend, set the values documented in `.env.example` and run

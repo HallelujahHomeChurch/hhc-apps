@@ -86,12 +86,14 @@ export class Sessions {
   }
   private async save(tokens: Tokens, epoch: number) {
     if (epoch !== this.epoch) throw new AuthError(401, "session_changed");
-    this.value = {
+    const value = {
       ...tokens,
       expiresAt: Date.now() + tokens.expires_in * 1000,
     };
-    const saved = JSON.stringify(this.value);
+    const saved = JSON.stringify(value);
     await this.write(() => this.storage.set(saved));
+    if (epoch !== this.epoch) throw new AuthError(401, "session_changed");
+    this.value = value;
     return tokens.access_token;
   }
   async finish(code: string, verifier: string, redirectURI: string) {

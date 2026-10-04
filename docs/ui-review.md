@@ -1,16 +1,25 @@
-# iPhone design and appearance review — 2026-10-04
+# iPhone navigation, login and appearance review — 2026-10-04
 
-Branch: `feat/mobile-iphone-design-20261004`.
-Worktree: `apps/.worktrees/mobile-iphone-design-20261004`.
-Preview: http://localhost:5201.
+Branch: `feat/mobile-navigation-auth-20261004`.
+Worktree: `apps/.worktrees/mobile-navigation-auth-20261004`.
+Preview: http://localhost:5202.
 
-## This revision
+## Current navigation and login revision
+
+See [navigation-auth.md](navigation-auth.md) for the login contract and validation.
+Root headers use a left-aligned original logo + HHC and a right notification bell.
+Only Home, Service and Profile remain in the native tab bar. Notifications open
+as a stack screen, with unread count and per-notification read state.
+All private routes require a session; the local preview also starts with an
+explicit login action. App settings and logout stay usable if reminders fail to load.
+
+## Retained visual design
 
 - Light mode uses a quiet white next-service surface; dark mode uses lifted slate.
   Date, task and time share the same left-to-right reading order as roster rows.
   Reduce task titles to 24pt and section headings to 18pt. Group roster rows with
   continuous first/last corners; date rails no longer add nested colored pills.
-- Header sun/moon toggles directly between light and dark. First launch follows
+- The switch in 我的 → 外觀 toggles directly between light and dark. First launch follows
   the system until the user chooses. Store the choice locally (SecureStore on
   native, localStorage on web), independently of account reminder preferences.
   Late native reads cannot overwrite a tap; native writes preserve tap order.
@@ -20,7 +29,7 @@ Preview: http://localhost:5201.
   and root data-theme so Expo UI controls override the OS preference too.
 - Reuse hhc-web's original app-icon-512.png for the installed app icon; keep the
   original circular logo plus HHC in the header. No generated brand assets.
-- Verification in this revision: typecheck, 13 tests, production all-platform
+- Verification in this revision: typecheck, 15 tests, production all-platform
   export and synthetic web export pass. Appearance regression covers OS
   overrides in both directions, persistence, rapid taps, unavailable storage
   and navigation. Pull-refresh regression passes including draft preservation.
@@ -87,7 +96,7 @@ that repeat what the layout already communicates.
 
 ## Previous interaction revision validation for this revision
 
-- TypeScript and 13 tests, including Android refresh-wrapper child/layout propagation
+- TypeScript and 15 tests, including Android refresh-wrapper child/layout propagation
   and city searches using spaces, underscores, Chinese names and IANA ids.
 - Production iOS/Android/web and separate preview exports.
 - Repeatable browser touch regression: `scripts/check-pull-refresh.mjs`.

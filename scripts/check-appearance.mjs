@@ -1,4 +1,4 @@
-// sed 's/TASK_SPACE_ID/110/g' scripts/check-appearance.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/111/g' scripts/check-appearance.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const p = (await taskSpace(Number("TASK_SPACE_ID"))).page("p1");
 await p.cdp("Emulation.setDeviceMetricsOverride", {
@@ -10,14 +10,22 @@ await p.cdp("Emulation.setDeviceMetricsOverride", {
 await p.cdp("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-color-scheme", value: "dark" }],
 });
-await p.goto("http://localhost:5201/profile");
-await p.waitForSelector('loc=role:button[name*="切換"]');
+await p.goto("http://localhost:5202/profile");
 if (
   await p.evaluate(
-    () => !!document.querySelector('[aria-label="切換淺色模式"]'),
+    () => !!document.querySelector('[aria-label="使用教會帳號登入"]'),
   )
 ) {
-  await p.click('loc=role:button[name="切換淺色模式"]');
+  await p.click('loc=role:button[name="使用教會帳號登入"]');
+  await p.goto("http://localhost:5202/profile");
+}
+await p.waitForFunction(
+  () => !!document.querySelector('[data-testid="appearance-toggle"]'),
+);
+if (await p.evaluate(() => document.documentElement.dataset.theme === "dark")) {
+  await p.evaluate(() =>
+    document.querySelector('[data-testid="appearance-toggle"]').click(),
+  );
 }
 await p.waitForFunction(
   () => document.documentElement.dataset.theme === "light",
@@ -37,7 +45,9 @@ assert.equal(
   "rgb(0, 0, 0)",
 );
 await p.reload();
-await p.waitForSelector('loc=role:button[name="切換深色模式"]');
+await p.waitForFunction(
+  () => !!document.querySelector('[data-testid="appearance-toggle"]'),
+);
 assert.equal(
   await p.evaluate(() => localStorage.getItem("hhc-appearance")),
   "light",
@@ -45,7 +55,7 @@ assert.equal(
 // Several taps in one event turn must keep the final selection and storage aligned.
 await p.evaluate(() => {
   for (let i = 0; i < 5; i++)
-    document.querySelector('[aria-label^="切換"]').click();
+    document.querySelector('[data-testid="appearance-toggle"]').click();
 });
 await p.waitForFunction(
   () => document.documentElement.dataset.theme === "dark",
@@ -58,7 +68,9 @@ await p.cdp("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-color-scheme", value: "light" }],
 });
 await p.reload();
-await p.waitForSelector('loc=role:button[name="切換淺色模式"]');
+await p.waitForFunction(
+  () => !!document.querySelector('[data-testid="appearance-toggle"]'),
+);
 assert.equal(
   await p.evaluate(() => document.documentElement.style.colorScheme),
   "dark",
@@ -70,18 +82,24 @@ await p.evaluate(() => {
     throw new DOMException("Blocked", "SecurityError");
   };
   try {
-    document.querySelector('[aria-label="切換淺色模式"]').click();
+    document.querySelector('[data-testid="appearance-toggle"]').click();
   } finally {
     Storage.prototype.setItem = set;
   }
 });
-await p.waitForSelector('loc=role:button[name="切換深色模式"]');
+await p.waitForFunction(
+  () => !!document.querySelector('[data-testid="appearance-toggle"]'),
+);
 assert.equal(
   await p.evaluate(() => document.documentElement.dataset.theme),
   "light",
 );
-await p.click('loc=role:button[name="切換深色模式"]');
-await p.click('loc=role:button[name="切換淺色模式"]');
+await p.evaluate(() =>
+  document.querySelector('[data-testid="appearance-toggle"]').click(),
+);
+await p.evaluate(() =>
+  document.querySelector('[data-testid="appearance-toggle"]').click(),
+);
 await p.click("loc=href:/");
 await p.waitForSelector('loc=role:button[name*="下一次服事"]');
 console.log(

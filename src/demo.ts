@@ -172,9 +172,13 @@ export const demoFetch: typeof fetch = async (input, init) => {
     headers: { "Content-Type": "application/json" },
   });
 };
-export const demoSession = JSON.stringify({
-  access_token: "synthetic-demo-access",
-  refresh_token: "synthetic-demo-refresh",
-  expires_in: 86400,
-  expiresAt: Date.now() + 86400000,
-});
+// Session exchange stays local and uses the same explicit sign-in/refresh path.
+export const demoTokenFetch: typeof fetch = async () =>
+  new Response(
+    JSON.stringify({
+      access_token: "synthetic-demo-access",
+      refresh_token: "synthetic-demo-refresh",
+      expires_in: 86400,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   FlatList,
   Platform,
   Pressable,
@@ -18,6 +19,7 @@ import {
   useIsFocused,
   useRouter,
 } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useService } from "./service-state";
 import {
   Action,
@@ -30,7 +32,7 @@ import {
   SectionTitle,
 } from "./service-ui";
 import { PullToRefresh } from "./pull-to-refresh";
-import { ReminderSettings } from "./reminder-settings";
+import { AppearanceSettings, ReminderSettings } from "./reminder-settings";
 import { formatDate, formatRange, zoneLabel } from "./presentation";
 import { space, type } from "./theme";
 import type { Assignment } from "./api";
@@ -100,60 +102,102 @@ export function LoginScreen() {
     ready,
     busy,
     login,
+    error,
     initializationError,
     retryInitialization,
   } = useService();
+  const insets = useSafeAreaInsets();
   return (
     <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
+      style={{ backgroundColor: colors.canvas }}
       contentContainerStyle={{
-        padding: space.page,
-        gap: space.xl,
+        paddingHorizontal: space.page,
+        paddingTop: insets.top + space.lg,
+        paddingBottom: insets.bottom + space.page,
         flexGrow: 1,
-        justifyContent: "center",
-        backgroundColor: colors.canvas,
       }}
     >
       <Brand color={colors.text} />
-      <Text style={[type.title, { color: colors.text }]}>一起服事</Text>
-      <Text style={[type.body, { color: colors.muted }]}>
-        班表、代班與提醒，在這裡。
-      </Text>
-      {session && <Feedback />}
-      {!session ? (
-        initializationError ? (
-          <View style={{ gap: space.md }}>
-            <Text
-              accessibilityRole="alert"
-              style={[type.body, { color: colors.text }]}
-            >
-              {initializationError}
-            </Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          paddingVertical: space.xxl,
+          gap: space.xl,
+        }}
+      >
+        <View
+          style={{
+            alignSelf: "flex-start",
+            padding: 24,
+            borderRadius: 36,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Image
+            source={require("../assets/hhc-logo.png")}
+            accessible={false}
+            style={{ width: 100, height: 100 }}
+          />
+        </View>
+        <View style={{ gap: space.md }}>
+          <Text
+            accessibilityRole="header"
+            style={{
+              color: colors.text,
+              fontSize: 34,
+              lineHeight: 44,
+              fontWeight: "600",
+              letterSpacing: -0.8,
+            }}
+          >
+            一起服事，{"\n"}彼此同行。
+          </Text>
+          <Text style={[type.body, { color: colors.muted }]}>
+            哈利路亞家教會
+          </Text>
+        </View>
+      </View>
+      <View style={{ gap: space.lg }}>
+        {!!(initializationError || error) && (
+          <Text
+            accessibilityRole="alert"
+            style={[type.small, { color: colors.primary }]}
+          >
+            {initializationError || error}
+          </Text>
+        )}
+        {!session ? (
+          initializationError ? (
             <Action
               title="重試"
               onPress={retryInitialization}
               colors={colors}
             />
-          </View>
+          ) : (
+            <ActivityIndicator
+              accessibilityLabel="正在讀取登入狀態"
+              color={colors.primary}
+            />
+          )
         ) : (
-          <ActivityIndicator color={colors.primary} />
-        )
-      ) : (
-        <>
-          {!ready && (
-            <Text style={[type.small, { color: colors.muted }]}>
-              測試環境尚未設定，暫時無法登入。
-            </Text>
-          )}
-          <Action
-            title="使用教會帳號登入"
-            colors={colors}
-            onPress={() => void login()}
-            disabled={!ready}
-            loading={busy}
-          />
-        </>
-      )}
+          <>
+            {!ready && (
+              <Text style={[type.small, { color: colors.muted }]}>
+                登入服務尚未設定完成。
+              </Text>
+            )}
+            <Action
+              title="使用教會帳號登入"
+              colors={colors}
+              onPress={() => void login()}
+              disabled={!ready}
+              loading={busy}
+            />
+          </>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -511,7 +555,16 @@ export function TabScreen({ tab }: { tab: Tab }) {
           )}
         </View>
       )}
+      {tab === "profile" && <AppearanceSettings />}
       {tab === "profile" && pref && <ReminderSettings preference={pref} />}
+      {tab === "profile" && (
+        <Action
+          title="登出"
+          quiet
+          colors={colors}
+          onPress={() => void state.logout()}
+        />
+      )}
     </View>
   );
   return tab === "service" ? (

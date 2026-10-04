@@ -28,6 +28,38 @@ import {
 import { TimeControl } from "./time-control";
 import { Palette, space, type } from "./theme";
 
+export function AppearanceSettings() {
+  const { colors, mode, toggleAppearance } = useService();
+  return (
+    <View style={{ gap: space.md }}>
+      <SectionTitle title="外觀" colors={colors} />
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: 22,
+          padding: space.lg,
+        }}
+      >
+        <Host
+          colorScheme={colors.scheme}
+          seedColor={colors.primary}
+          matchContents={{ vertical: true }}
+          style={{ width: "100%" }}
+        >
+          <Switch
+            testID="appearance-toggle"
+            label="深色模式"
+            value={mode === "dark"}
+            onValueChange={(value) => {
+              if (value !== (mode === "dark")) toggleAppearance();
+            }}
+          />
+        </Host>
+      </View>
+    </View>
+  );
+}
+
 export function ReminderSettings({ preference }: { preference: Preference }) {
   const {
     colors,
@@ -36,7 +68,6 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
     setDisplayZone,
     permission,
     enablePush,
-    logout,
   } = useService();
   const [draft, setDraft] = useState(preference);
   const [dirty, setDirty] = useState(false);
@@ -87,6 +118,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
   };
   return (
     <View style={{ gap: space.lg }}>
+      <SectionTitle title="提醒" colors={colors} />
       <View
         style={{
           backgroundColor: colors.surface,
@@ -246,7 +278,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
           {feedback}
         </Text>
       )}
-      <SectionTitle title="顯示與通知" colors={colors} />
+      <SectionTitle title="時區與通知" colors={colors} />
       <View
         style={{
           backgroundColor: colors.surface,
@@ -270,17 +302,6 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
           colors={colors}
         />
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => void logout()}
-        style={{
-          minHeight: 48,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text style={[type.body, { color: colors.muted }]}>登出</Text>
-      </Pressable>
       <Host colorScheme={colors.scheme}>
         <BottomSheet
           isPresented={zoneFor !== null}

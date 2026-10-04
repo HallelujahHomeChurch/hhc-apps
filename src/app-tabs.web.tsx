@@ -4,8 +4,7 @@ import { AppIcon } from "./service-ui";
 import { useService } from "./service-state";
 import { labels, Tab } from "./screens";
 export function AppTabs() {
-  const { colors, notices } = useService();
-  const unread = notices.filter((n) => !n.readAt).length;
+  const { colors } = useService();
   return (
     <Tabs
       screenOptions={{
@@ -25,18 +24,15 @@ export function AppTabs() {
         sceneStyle: { backgroundColor: colors.canvas },
       }}
     >
-      {(Object.keys(labels) as Tab[]).map((tab) => (
+      {(["home", "service", "profile"] as Tab[]).map((tab) => (
         <Tabs.Screen
           key={tab}
           name={tab === "home" ? "index" : tab}
           options={{
             title: labels[tab],
-            tabBarIcon: ({ color }) => <AppIcon name={tab} color={String(color)} />,
-            tabBarBadge: tab === "notifications" && unread ? unread : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: colors.primary,
-              color: colors.onPrimary,
-            },
+            tabBarIcon: ({ color }) => (
+              <AppIcon name={tab} color={String(color)} />
+            ),
           }}
         />
       ))}

@@ -1,5 +1,5 @@
 // Run against a synthetic preview in an existing Ego task space:
-// sed 's/TASK_SPACE_ID/109/g' scripts/check-pull-refresh.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/111/g' scripts/check-pull-refresh.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const space = await taskSpace(Number("TASK_SPACE_ID"));
 const p = space.page("p1");
@@ -13,7 +13,14 @@ await p.cdp("Emulation.setTouchEmulationEnabled", {
   enabled: true,
   maxTouchPoints: 1,
 });
-await p.goto("http://localhost:5201");
+await p.goto("http://localhost:5202");
+if (
+  await p.evaluate(
+    () => !!document.querySelector('[aria-label="使用教會帳號登入"]'),
+  )
+) {
+  await p.click('loc=role:button[name="使用教會帳號登入"]');
+}
 await p.waitForSelector('loc=role:button[name*="下一次服事"]', {
   state: "visible",
 });
