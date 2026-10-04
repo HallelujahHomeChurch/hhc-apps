@@ -4,7 +4,6 @@ Branch: `feat/mobile-iphone-design-20261004`.
 Worktree: `apps/.worktrees/mobile-iphone-design-20261004`.
 Preview: http://localhost:5201.
 
-
 ## This revision
 
 - Light mode uses a quiet white next-service surface; dark mode uses lifted slate.
@@ -29,6 +28,29 @@ Preview: http://localhost:5201.
   settings in light, dark timezone sheet and light replacement sheet.
 - Repeatable appearance regression: `scripts/check-appearance.mjs` against the
   local synthetic preview in an existing Ego task space.
+
+## Native simulator verification
+
+- Xcode 26.6, iOS 26.5, iPhone 17 on this Mac. Local arm64 Release build
+  succeeds and is installed as `tw.org.alive.hhcapp`; runs without Metro.
+- Use local ad-hoc signing. Disabling code signing produced Keychain -34018
+  during initialization; the signed simulator build includes the generated
+  application identifier and Keychain access group and starts successfully.
+- Initialization failures now stop loading and expose a working retry. Browser
+  fault injection in `scripts/check-initialization.mjs` confirms recovery.
+- Verified native light/dark switching and persistence after terminating and
+  relaunching the app; native glass tab bar, all four tabs, roster and detail.
+- Verified reminder day menu, time wheel, New York search and save with an
+  independent Taipei display zone. Native day/time controls align in rows; iOS
+  uses an intrinsically measured SwiftUI time picker in its own platform file.
+- Verified replacement sheet, local public request, notification-to-detail and
+  accepting an invitation, including the updated assignee and available action.
+- A simulator drag probe is not proof of physical pull-to-refresh behavior. The
+  web gesture regression passes; physical iPhone gestures, VoiceOver/Dynamic
+  Type, real authentication and push delivery remain device/integration gates.
+- The standalone simulator app uses synthetic local data, with no API mutation
+  or notification delivery. Real backend integration is not claimed by these
+  local UI checks. No merge, signed distribution or release was performed.
 
 ## Acceptance criteria
 
@@ -79,8 +101,8 @@ that repeat what the layout already communicates.
   save and New York city search with independent display timezone.
 - Visual checks: 390px light, 320px dark home/roster, compact settings, and short
   replacement sheet with its final action completely inside the viewport.
-- Native runtime/device acceptance is still outstanding; bundles and the Android
-  wrapper contract check do not prove physical gesture or Liquid Glass fidelity.
+- At that revision native runtime/device acceptance was outstanding. The current
+  simulator evidence is recorded above; physical-device acceptance remains open.
 
 ## Design contract
 

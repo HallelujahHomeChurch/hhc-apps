@@ -94,7 +94,15 @@ export function Feedback() {
   );
 }
 export function LoginScreen() {
-  const { colors, session, ready, busy, login } = useService();
+  const {
+    colors,
+    session,
+    ready,
+    busy,
+    login,
+    initializationError,
+    retryInitialization,
+  } = useService();
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
@@ -111,9 +119,25 @@ export function LoginScreen() {
       <Text style={[type.body, { color: colors.muted }]}>
         班表、代班與提醒，在這裡。
       </Text>
-      <Feedback />
+      {session && <Feedback />}
       {!session ? (
-        <ActivityIndicator color={colors.primary} />
+        initializationError ? (
+          <View style={{ gap: space.md }}>
+            <Text
+              accessibilityRole="alert"
+              style={[type.body, { color: colors.text }]}
+            >
+              {initializationError}
+            </Text>
+            <Action
+              title="重試"
+              onPress={retryInitialization}
+              colors={colors}
+            />
+          </View>
+        ) : (
+          <ActivityIndicator color={colors.primary} />
+        )
       ) : (
         <>
           {!ready && (

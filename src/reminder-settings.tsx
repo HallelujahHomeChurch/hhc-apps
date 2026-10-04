@@ -114,8 +114,26 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
         </View>
         {draft.enabled && (
           <>
-            <View style={{ gap: space.sm }}>
-              <Text style={[type.small, { color: colors.muted }]}>
+            <View
+              style={
+                Platform.OS === "web"
+                  ? { gap: space.sm }
+                  : {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: space.md,
+                      minHeight: 48,
+                    }
+              }
+            >
+              <Text
+                style={[
+                  Platform.OS === "web" ? type.small : type.body,
+                  { color: Platform.OS === "web" ? colors.muted : colors.text },
+                ]}
+              >
                 提醒日期
               </Text>
               {Platform.OS === "web" ? (
@@ -145,8 +163,7 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
                 <Host
                   colorScheme={colors.scheme}
                   seedColor={colors.primary}
-                  matchContents={{ vertical: true }}
-                  style={{ width: "100%" }}
+                  matchContents
                 >
                   <Picker
                     selectedValue={draft.leadDays}
@@ -161,8 +178,26 @@ export function ReminderSettings({ preference }: { preference: Preference }) {
                 </Host>
               )}
             </View>
-            <View style={{ gap: space.sm }}>
-              <Text style={[type.small, { color: colors.muted }]}>
+            <View
+              style={
+                Platform.OS === "web"
+                  ? { gap: space.sm }
+                  : {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: space.md,
+                      minHeight: 48,
+                    }
+              }
+            >
+              <Text
+                style={[
+                  Platform.OS === "web" ? type.small : type.body,
+                  { color: Platform.OS === "web" ? colors.muted : colors.text },
+                ]}
+              >
                 提醒時間
               </Text>
               <TimeControl

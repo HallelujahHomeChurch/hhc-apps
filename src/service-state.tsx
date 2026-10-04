@@ -41,6 +41,8 @@ function useServiceState() {
   const { mode, toggleAppearance } = useAppearance();
   const colors = mode === "dark" ? dark : light;
   const [session, setSession] = useState<Sessions | null>(null);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
+  const [initializationError, setInitializationError] = useState("");
   const [stale, setStale] = useState(false);
   const [signed, setSigned] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -136,11 +138,13 @@ function useServiceState() {
       );
       setSession(s);
       setSigned(!!s.current);
-    })().catch((e) => setError(message(e)));
+    })().catch(() => {
+      if (alive) setInitializationError("無法讀取本機登入資料，請再試一次。");
+    });
     return () => {
       alive = false;
     };
-  }, [clear]);
+  }, [clear, initializationAttempt]);
   const openDetail = useCallback(async (id: string) => {
     if (!api.current) return;
     const epoch = generation.current;
@@ -436,6 +440,11 @@ function useServiceState() {
     mode,
     toggleAppearance,
     session,
+    initializationError,
+    retryInitialization: () => {
+      setInitializationError("");
+      setInitializationAttempt((attempt) => attempt + 1);
+    },
     signed,
     ready,
     stale,

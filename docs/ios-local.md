@@ -24,15 +24,21 @@ For the configured backend, set the values documented in `.env.example` and run
 `npm run ios`. Login, real notifications and physical iPhone acceptance require
 that integration environment and remain separate from simulator UI acceptance.
 
-An installable, Metro-independent simulator build can be produced locally:
+On this Apple Silicon Mac, an installable, Metro-independent simulator build
+can be produced locally (arm64 only avoids an unused Intel build):
 
 ```sh
-EXPO_PUBLIC_DEMO=true EXPO_NO_TELEMETRY=1 xcodebuild \
+EXPO_PUBLIC_DEMO=true NODE_ENV=production EXPO_NO_TELEMETRY=1 xcodebuild \
   -workspace ios/HHC.xcworkspace -scheme HHC -configuration Release \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath ios/build-local CODE_SIGNING_ALLOWED=NO
+  -derivedDataPath ios/build-local -jobs 4 \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
 Generated `ios/`, Pods and build output are ignored by Git. App configuration
 and package scripts are the reproducible source; don't hand-edit generated iOS
 files. The app icon comes directly from the website's HHC brand assets.
+
+Keep local ad-hoc code signing enabled: SecureStore and notification registration
+need the app Keychain entitlements even in Simulator. No Developer Program
+identity is needed for this local simulator signing.
