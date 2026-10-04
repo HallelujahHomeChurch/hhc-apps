@@ -1,8 +1,35 @@
-# Mobile native-navigation revision — 2026-10-04
+# Mobile compact-layout revision — 2026-10-04
 
-Branch: `feat/mobile-native-20261004`.
-Worktree: `apps/.worktrees/mobile-native-20261004`.
-Preview: http://localhost:5198 (synthetic transport; reload resets data).
+Branch: `feat/mobile-layout-20261004`.
+Worktree: `apps/.worktrees/mobile-layout-20261004`.
+Preview: http://localhost:5199 (synthetic transport; reload resets data).
+
+## Current layout revision
+
+- Reference Flighty's prioritization of the next event and Things' clear task
+  groups, rather than reproducing every element of either app. Their official
+  screenshots and design explanations were reviewed.
+- Replace the large page title with a compact 17pt navigation title. Home uses
+  the church name once in navigation; the repeated brand line is removed.
+  Other destinations retain a small location label and refresh action.
+- Task titles use 26/34pt instead of 32/42pt. Keep the date prominent and the
+  existing slate/rose palette, labeled native tabs and task grouping.
+- Remove demo-only copy from every tab. Simulated notification activation uses
+  the same enabled state as production. No preview labels or banners are rendered;
+  the synthetic transport and build guards remain unchanged.
+- Keep operational information such as offline state, conflicts, timezones and
+  a reminder that would occur after its event. Those affect real decisions.
+
+### Current validation
+
+- TypeScript, all 11 tests and production iOS/Android/web exports pass; the
+  separate preview export passes. No dependencies were changed.
+- Browser checks: all four tabs, detail opening/back, simulated notification
+  activation, 390px light/dark and 320px dark screenshots. The home header is
+  17px, the 320px viewport has no horizontal overflow, and demo-only notices
+  are absent. Long assignment names wrap instead of truncating.
+- Earlier feature checks below describe the carried-forward native-navigation
+  revision; device acceptance remains open.
 
 ## Design contract
 
@@ -44,7 +71,7 @@ the point where they matter. Do not remove labels in pursuit of visual minimalis
 - Current responsibility stays prominent; obsolete withdrawn-request text and
   routine synchronization timestamps no longer compete with the primary task.
 
-## Validation
+## Earlier native-navigation validation
 
 - TypeScript and 11 tests pass. New checks cover clock round trips, invalid
   preferences, uncommon zones, cross-day display, year-boundary ranges and old
@@ -77,6 +104,8 @@ was performed; earlier worktrees and previews remain available.
 
 ## References
 
+- https://developer.apple.com/news/?id=970ncww4
+- https://culturedcode.com/things/features/
 - https://docs.expo.dev/versions/v57.0.0/sdk/router/native-tabs/
 - https://docs.expo.dev/router/installation/
 - Installed `@expo/ui` SDK 57 types and implementations for native controls/bridges.

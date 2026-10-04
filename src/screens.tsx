@@ -28,7 +28,6 @@ import {
   SectionTitle,
 } from "./service-ui";
 import { ReminderSettings } from "./reminder-settings";
-import { demoEnabled } from "./demo";
 import { formatDate, formatRange, zoneLabel } from "./presentation";
 import { space, type } from "./theme";
 import type { Assignment } from "./api";
@@ -225,24 +224,9 @@ export function TabScreen({ tab }: { tab: Tab }) {
   };
   const content = (
     <View style={{ gap: space.lg, paddingBottom: space.lg }}>
-      {tab === "home" && (
-        <Text
-          style={[
-            type.caption,
-            { color: colors.primary, fontWeight: "600", letterSpacing: 1 },
-          ]}
-        >
-          HHC / 哈利路亞家教會
-        </Text>
-      )}
       {tab === "home" && items.some((a) => a.timeZone !== displayZone) && (
         <Text style={[type.caption, { color: colors.muted }]}>
           {zoneLabel(displayZone)}時間
-        </Text>
-      )}
-      {demoEnabled && (
-        <Text style={[type.caption, { color: colors.muted }]}>
-          示範資料 · 不會發送通知
         </Text>
       )}
       <Feedback />

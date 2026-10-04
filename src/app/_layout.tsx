@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, Pressable, useColorScheme } from "react-native";
+import { Pressable, useColorScheme } from "react-native";
 import {
   Stack,
   ThemeProvider,
@@ -22,7 +22,7 @@ function Navigation() {
         ? "通知"
         : path === "/profile"
           ? "我的"
-          : "我的服事";
+          : "哈利路亞家教會";
   const theme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
   return (
     <ThemeProvider
@@ -46,7 +46,7 @@ function Navigation() {
           headerTitleStyle: {
             color: colors.text,
             fontWeight: "600",
-            fontSize: Platform.OS === "web" ? 28 : 17,
+            fontSize: 17,
           },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.canvas },
@@ -58,7 +58,7 @@ function Navigation() {
           name="(tabs)"
           options={{
             title,
-            headerLargeTitle: true,
+            headerLargeTitle: false,
             headerRight: signed
               ? () => (
                   <Pressable

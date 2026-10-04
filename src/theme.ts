@@ -45,8 +45,8 @@ export const space = {
 };
 export const type = {
   title: {
-    fontSize: 32,
-    lineHeight: 42,
+    fontSize: 26,
+    lineHeight: 34,
     fontWeight: "600" as const,
     letterSpacing: -0.5,
   },

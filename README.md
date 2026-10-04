@@ -12,8 +12,10 @@ npm ci
 npm run demo:web
 ```
 
-Open `http://localhost:5198` (stop any static preview already using that port first). The demo label means **synthetic data**:
-no real accounts, server mutations or push delivery. The demo transport never
+Open `http://localhost:5199` (stop any static preview already using that port first).
+Preview screens use production UI and copy, without demo-only notices. Data and
+notification-permission state are simulated: no real accounts, server mutations
+or push delivery. The demo transport never
 uses the network. Reload resets its sample state. This preview is for layout
 and interaction review, not acceptance of authentication or native notifications.
 
@@ -24,7 +26,7 @@ Use a development/internal native build for push testing, not a web preview.
 
 ## Architecture
 
-The UI refinement branch is `feat/mobile-native-20261004`, in a separate worktree
+The UI refinement branch is `feat/mobile-layout-20261004`, in a separate worktree
 from the original MVP. See [UI review](docs/ui-review.md) for design decisions,
 verified interactions and the remaining native-device checks.
 

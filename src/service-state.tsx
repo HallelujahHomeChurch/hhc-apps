@@ -418,7 +418,7 @@ function useServiceState() {
   }
   async function enablePush() {
     if (demoEnabled) {
-      setPermission("示範模式");
+      setPermission("已啟用");
       return;
     }
     if (!api.current) return;
