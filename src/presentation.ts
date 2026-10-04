@@ -81,3 +81,39 @@ export function clockDate(value: string) {
 export function clockValue(value: Date) {
   return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
 }
+
+// Calendar grouping follows the chosen display zone, never the device's local month.
+export function calendarMonth(instant: number | string, zone: string) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date(instant));
+  return `${parts.find((p) => p.type === "year")!.value}-${parts.find((p) => p.type === "month")!.value}`;
+}
+export function shiftMonth(month: string, offset: number) {
+  const [year, value] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, value - 1 + offset, 1))
+    .toISOString()
+    .slice(0, 7);
+}
+export function monthRange(month: string) {
+  const [year, value] = month.split("-").map(Number);
+  // Fetch a superset covering UTC-12 through UTC+14, then filter by display-zone month.
+  return {
+    from: new Date(Date.UTC(year, value - 1, 1) - 14 * 3600000).toISOString(),
+    to: new Date(Date.UTC(year, value, 1) + 12 * 3600000).toISOString(),
+  };
+}
+export function monthTitle(month: string) {
+  const [year, value] = month.split("-").map(Number);
+  return `${year}年${value}月`;
+}
+export function dateKey(instant: string, zone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(instant));
+}

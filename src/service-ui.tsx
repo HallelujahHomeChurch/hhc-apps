@@ -192,6 +192,7 @@ export function AssignmentRow({
   onPress,
   viewerId,
   showAssignee = true,
+  showDate = true,
   style,
 }: {
   assignment: Assignment;
@@ -200,6 +201,7 @@ export function AssignmentRow({
   onPress: () => void;
   viewerId?: string;
   showAssignee?: boolean;
+  showDate?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const d = parts(a.startsAt, zone);
@@ -230,11 +232,15 @@ export function AssignmentRow({
         style,
       ]}
     >
-      <View style={s.dateRail}>
-        <Text style={[type.caption, { color: colors.muted }]}>{d.month}</Text>
-        <Text style={[s.day, { color: colors.text }]}>{d.day}</Text>
-        <Text style={[type.caption, { color: colors.muted }]}>{d.weekday}</Text>
-      </View>
+      {showDate && (
+        <View style={s.dateRail}>
+          <Text style={[type.caption, { color: colors.muted }]}>{d.month}</Text>
+          <Text style={[s.day, { color: colors.text }]}>{d.day}</Text>
+          <Text style={[type.caption, { color: colors.muted }]}>
+            {d.weekday}
+          </Text>
+        </View>
+      )}
       <View style={{ flex: 1, gap: space.xs }}>
         <Text style={[type.body, { color: colors.text, fontWeight: "600" }]}>
           {a.label}
@@ -254,12 +260,7 @@ export function AssignmentRow({
               {
                 color: colors.primary,
                 fontWeight: "600",
-                backgroundColor: colors.soft,
                 alignSelf: "flex-start",
-                paddingHorizontal: space.sm,
-                paddingVertical: space.xs,
-                borderRadius: 8,
-                overflow: "hidden",
               },
             ]}
           >
@@ -769,10 +770,10 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   heroDay: {
-    fontSize: 48,
-    lineHeight: 54,
-    fontWeight: "300",
-    letterSpacing: -2,
+    fontSize: 38,
+    lineHeight: 46,
+    fontWeight: "500",
+    letterSpacing: -1,
     fontVariant: ["tabular-nums"],
   },
   progress: {

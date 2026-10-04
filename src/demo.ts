@@ -85,7 +85,9 @@ export const demoFetch: typeof fetch = async (input, init) => {
   const body = init?.body ? JSON.parse(String(init.body)) : undefined;
   let data: unknown;
   let status = 200;
-  if (path.endsWith("/teams")) data = teams;
+  if (path === "/api/account/v1/me")
+    data = { id: memberID, email: "yien@example.com", nickname: "陳以恩" };
+  else if (path.endsWith("/teams")) data = teams;
   else if (path.endsWith("/candidates")) data = candidates;
   else if (path.endsWith("/commands")) {
     const index = assignments.findIndex((a) => path.includes(a.id));

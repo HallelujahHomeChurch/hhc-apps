@@ -87,3 +87,24 @@ describe("authenticated service transport", () => {
     }
   });
 });
+
+it("uses the existing authenticated account profile endpoint and isolates profile errors", async () => {
+  const s = await session();
+  const clear = vi.fn();
+  const fetcher = vi.fn(
+    async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      new Response('{"error_code":"unavailable"}', { status: 503 }),
+  );
+  const api = serviceAPI("https://operations.test", s, clear, fetcher);
+  await expect(
+    api.profile("https://account.test/api/account/v1"),
+  ).rejects.toBeInstanceOf(APIError);
+  expect(fetcher.mock.calls[0][0]).toBe(
+    "https://account.test/api/account/v1/me",
+  );
+  expect((fetcher.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+    Authorization: "Bearer synthetic-access",
+  });
+  expect(clear).not.toHaveBeenCalled();
+  expect(s.current).not.toBeNull();
+});

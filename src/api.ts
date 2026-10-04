@@ -1,5 +1,12 @@
 import { Sessions, AuthError } from "./session";
 import type { components } from "./generated";
+export type AccountProfile = {
+  id: string;
+  email: string;
+  nickname?: string;
+  first_name?: string;
+  last_name?: string;
+};
 export type Team = components["schemas"]["ServiceTeam"];
 export type Candidate = components["schemas"]["ServiceCandidate"];
 export type Replacement = components["schemas"]["ServiceReplacement"];
@@ -24,6 +31,7 @@ export function serviceAPI(
     path: string,
     body?: unknown,
     key?: string,
+    accountBase?: string,
   ): Promise<T> {
     const epoch = sessions.revision;
     let token: string;
@@ -34,7 +42,7 @@ export function serviceAPI(
       throw e;
     }
     const send = () =>
-      fetcher(base + "/api/operations/me/service" + path, {
+      fetcher((accountBase || base + "/api/operations/me/service") + path, {
         signal: AbortSignal.timeout(15000),
         method: body === undefined ? "GET" : "POST",
         headers: {
@@ -57,7 +65,11 @@ export function serviceAPI(
     if (epoch !== sessions.revision)
       throw new AuthError(401, "session_changed");
     if (!res.ok) {
-      if ([401, 403, 404].includes(res.status)) onDenied();
+      if (
+        res.status === 401 ||
+        (!accountBase && [403, 404].includes(res.status))
+      )
+        onDenied();
       const data = await res.json().catch(() => ({}));
       throw new APIError(res.status, data.error_code || "request_failed");
     }
@@ -67,6 +79,8 @@ export function serviceAPI(
     return data;
   }
   return {
+    profile: (accountBase: string) =>
+      request<AccountProfile>("/me", undefined, undefined, accountBase),
     installation: (body: {
       id: string;
       secret: string;

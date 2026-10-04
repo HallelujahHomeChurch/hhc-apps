@@ -1,4 +1,4 @@
-// sed 's/TASK_SPACE_ID/111/g' scripts/check-appearance.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/114/g' scripts/check-appearance.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const p = (await taskSpace(Number("TASK_SPACE_ID"))).page("p1");
 await p.cdp("Emulation.setDeviceMetricsOverride", {
@@ -10,14 +10,14 @@ await p.cdp("Emulation.setDeviceMetricsOverride", {
 await p.cdp("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-color-scheme", value: "dark" }],
 });
-await p.goto("http://localhost:5202/profile");
+await p.goto("http://localhost:5203/profile");
 if (
   await p.evaluate(
     () => !!document.querySelector('[aria-label="使用教會帳號登入"]'),
   )
 ) {
   await p.click('loc=role:button[name="使用教會帳號登入"]');
-  await p.goto("http://localhost:5202/profile");
+  await p.goto("http://localhost:5203/profile");
 }
 await p.waitForFunction(
   () => !!document.querySelector('[data-testid="appearance-toggle"]'),

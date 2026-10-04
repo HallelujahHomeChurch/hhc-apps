@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  calendarMonth,
+  dateKey,
+  monthRange,
+  monthTitle,
+  shiftMonth,
   clockDate,
   clockValue,
   formatDate,
@@ -71,5 +76,34 @@ describe("existing notification and OAuth links", () => {
     ).toBe("/");
     expect(systemPath(`/assignment/${id}`)).toBe(`/assignment/${id}`);
     expect(systemPath(`hhc-app://assignment/${id}`)).toBe(`/assignment/${id}`);
+  });
+});
+
+describe("calendar month boundaries", () => {
+  it("shifts whole months across year and leap-year boundaries", () => {
+    expect(shiftMonth("2026-12", 1)).toBe("2027-01");
+    expect(shiftMonth("2024-03", -1)).toBe("2024-02");
+    expect(monthTitle("2027-01")).toBe("2027年1月");
+  });
+  it("groups the same instant into the correct display-zone date and month", () => {
+    const instant = "2026-11-01T00:30:00Z";
+    expect(calendarMonth(instant, "Asia/Taipei")).toBe("2026-11");
+    expect(calendarMonth(instant, "America/Los_Angeles")).toBe("2026-10");
+    expect(dateKey(instant, "America/Los_Angeles")).toBe("2026-10-31");
+    expect(dateKey("2026-11-01T05:30:00Z", "America/New_York")).toBe(
+      dateKey("2026-11-01T06:30:00Z", "America/New_York"),
+    );
+  });
+  it("covers both extreme time zones and leap day without a rolling 30-day window", () => {
+    const range = monthRange("2024-02");
+    expect(range.from).toBe("2024-01-31T10:00:00.000Z");
+    expect(range.to).toBe("2024-03-01T12:00:00.000Z");
+    expect(calendarMonth(range.from, "Pacific/Kiritimati")).toBe("2024-02");
+    expect(
+      calendarMonth(
+        new Date(Date.parse(range.to) - 1).toISOString(),
+        "Etc/GMT+12",
+      ),
+    ).toBe("2024-02");
   });
 });

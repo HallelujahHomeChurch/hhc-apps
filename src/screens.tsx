@@ -2,13 +2,11 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  FlatList,
+  SectionList,
   Platform,
   Pressable,
   ScrollView,
   type ScrollViewProps,
-  type StyleProp,
-  type ViewStyle,
   Text,
   View,
 } from "react-native";
@@ -19,12 +17,12 @@ import {
   useIsFocused,
   useRouter,
 } from "expo-router";
+import { Host, Picker } from "@expo/ui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useService } from "./service-state";
 import {
   Action,
   AppIcon,
-  Brand,
   AssignmentRow,
   EmptyState,
   NextService,
@@ -33,7 +31,15 @@ import {
 } from "./service-ui";
 import { PullToRefresh } from "./pull-to-refresh";
 import { AppearanceSettings, ReminderSettings } from "./reminder-settings";
-import { formatDate, formatRange, zoneLabel } from "./presentation";
+import {
+  calendarMonth,
+  dateKey,
+  monthRange,
+  monthTitle,
+  shiftMonth,
+  formatDate,
+  zoneLabel,
+} from "./presentation";
 import { space, type } from "./theme";
 import type { Assignment } from "./api";
 export type Tab = "home" | "service" | "notifications" | "profile";
@@ -118,7 +124,6 @@ export function LoginScreen() {
         flexGrow: 1,
       }}
     >
-      <Brand color={colors.text} />
       <View
         style={{
           flex: 1,
@@ -127,34 +132,26 @@ export function LoginScreen() {
           gap: space.xl,
         }}
       >
-        <View
-          style={{
-            alignSelf: "flex-start",
-            padding: 24,
-            borderRadius: 36,
-            backgroundColor: colors.surface,
-          }}
-        >
-          <Image
-            source={require("../assets/hhc-logo.png")}
-            accessible={false}
-            style={{ width: 100, height: 100 }}
-          />
-        </View>
-        <View style={{ gap: space.md }}>
+        <Image
+          source={require("../assets/hhc-logo.png")}
+          accessible={false}
+          style={{ width: 88, height: 88 }}
+        />
+        <View style={{ gap: space.sm }}>
           <Text
             accessibilityRole="header"
             style={{
               color: colors.text,
-              fontSize: 34,
-              lineHeight: 44,
-              fontWeight: "600",
-              letterSpacing: -0.8,
+              fontSize: 32,
+              fontWeight: "700",
+              letterSpacing: 1,
             }}
           >
-            一起服事，{"\n"}彼此同行。
+            HHC
           </Text>
-          <Text style={[type.body, { color: colors.muted }]}>
+          <Text
+            style={[type.heading, { color: colors.muted, fontWeight: "400" }]}
+          >
             哈利路亞家教會
           </Text>
         </View>
@@ -212,10 +209,9 @@ export function TabScreen({ tab }: { tab: Tab }) {
     items,
     notices,
     pref,
-    windowOffset,
-    setWindowOffset,
-    loadedWindow,
-    windowStart,
+    month,
+    setMonth,
+    loadedMonth,
     busy,
     error,
     updated,
@@ -226,38 +222,54 @@ export function TabScreen({ tab }: { tab: Tab }) {
   const router = useRouter();
   const focused = useIsFocused();
   const [rosterMode, setRosterMode] = useState<"mine" | "team">("mine");
-  useFocusEffect(
-    useCallback(() => {
-      if (tab === "home") setWindowOffset(0);
-    }, [tab, setWindowOffset]),
-  );
-  const windowReady =
-    loadedWindow === windowOffset && (tab !== "home" || windowOffset === 0);
+  const windowReady = tab !== "service" || loadedMonth === month;
   const available = windowReady ? items : [];
   const isMine = (a: Assignment) =>
     teams.some((t) => t.id === a.teamId && t.memberId === a.assigneeMemberId);
   const mine = available.filter(
-    (a) => !a.cancelled && Date.parse(a.startsAt) > Date.now() && isMine(a),
+    (a) =>
+      !a.cancelled &&
+      Date.parse(a.startsAt) > Date.now() &&
+      Date.parse(a.startsAt) < Date.now() + 60 * 86400000 &&
+      isMine(a),
   );
   const invitations = available.filter(
     (a) =>
       !a.cancelled &&
       Date.parse(a.startsAt) > Date.now() &&
+      Date.parse(a.startsAt) < Date.now() + 60 * 86400000 &&
       a.request?.status === "active" &&
       a.request.mode === "nominated" &&
       teams.some(
         (t) => t.id === a.teamId && t.memberId === a.request?.targetMemberId,
       ),
   );
-  const roster = available.filter((a) =>
-    rosterMode === "team" ? a.teamId === teamID : isMine(a),
+  const roster = available.filter(
+    (a) =>
+      calendarMonth(a.startsAt, displayZone) === month &&
+      (rosterMode === "team" ? a.teamId === teamID : isMine(a)),
   );
+  const grouped = new Map<string, Assignment[]>();
+  for (const a of roster) {
+    const key = dateKey(a.startsAt, displayZone);
+    grouped.set(key, [...(grouped.get(key) || []), a]);
+  }
+  const sections = [...grouped].map(([key, data]) => ({ key, data }));
+  const currentMonth = calendarMonth(Date.now(), displayZone);
+  const months = Array.from({ length: 6 }, (_, i) =>
+    shiftMonth(currentMonth, i - 2),
+  ).filter(
+    (value) => Date.parse(monthRange(value).from) >= Date.now() - 90 * 86400000,
+  );
+  if (!months.includes(month)) months.push(month);
+  months.sort();
   const open = (id: string) =>
     router.push({ pathname: "/assignment/[id]", params: { id } });
-  const row = (a: Assignment, style?: StyleProp<ViewStyle>) => (
+  const row = (a: Assignment) => (
     <AssignmentRow
       key={a.id}
-      style={style}
+      showDate={false}
+      style={{ backgroundColor: colors.canvas, paddingHorizontal: 0 }}
       assignment={a}
       colors={colors}
       zone={displayZone}
@@ -306,7 +318,47 @@ export function TabScreen({ tab }: { tab: Tab }) {
         <ActivityIndicator accessibilityLabel="載入中" color={colors.primary} />
       )}
       {tab === "home" && (
-        <>
+        <View style={{ gap: space.xl }}>
+          {!!invitations.length && (
+            <View style={{ gap: space.sm }}>
+              <SectionTitle
+                title={`待回覆 ${invitations.length}`}
+                colors={colors}
+              />
+              {invitations.map((a) => (
+                <Pressable
+                  key={a.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`代班邀請，${a.label}，${formatDate(a.startsAt, displayZone)}`}
+                  onPress={() => open(a.id)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: space.md,
+                    paddingVertical: space.md,
+                    borderBottomWidth: 0.5,
+                    borderColor: colors.line,
+                    opacity: pressed ? 0.5 : 1,
+                  })}
+                >
+                  <View style={{ flex: 1, gap: space.xs }}>
+                    <Text
+                      style={[
+                        type.body,
+                        { color: colors.text, fontWeight: "600" },
+                      ]}
+                    >
+                      {a.label}
+                    </Text>
+                    <Text style={[type.small, { color: colors.muted }]}>
+                      {formatDate(a.startsAt, displayZone)} · {a.teamName}
+                    </Text>
+                  </View>
+                  <AppIcon name="next" color={colors.primary} size={18} />
+                </Pressable>
+              ))}
+            </View>
+          )}
           {mine[0] ? (
             <NextService
               assignment={mine[0]}
@@ -316,35 +368,14 @@ export function TabScreen({ tab }: { tab: Tab }) {
             />
           ) : (
             updated &&
-            windowReady &&
             !error && (
-              <>
-                <EmptyState title="目前沒有即將到來的服事" colors={colors} />
-                <Action
-                  title="查看班表"
-                  secondary
-                  colors={colors}
-                  onPress={() => router.navigate("/service")}
-                />
-              </>
-            )
-          )}
-          {!!invitations.length && (
-            <>
-              <SectionTitle
-                title={`待回覆 ${invitations.length}`}
+              <EmptyState
+                title={teams.length ? "目前沒有近期服事" : "尚未加入服事團契"}
                 colors={colors}
               />
-              <View style={group}>{invitations.map((a) => row(a))}</View>
-            </>
+            )
           )}
-          {mine.length > 1 && (
-            <>
-              <SectionTitle title="接下來" colors={colors} />
-              <View style={group}>{mine.slice(1, 4).map((a) => row(a))}</View>
-            </>
-          )}
-        </>
+        </View>
       )}
       {tab === "service" && (
         <>
@@ -385,88 +416,107 @@ export function TabScreen({ tab }: { tab: Tab }) {
             ))}
           </View>
           {rosterMode === "team" &&
+            teams.length > 0 &&
             (teams.length === 1 ? (
               <Text style={[type.small, { color: colors.muted }]}>
                 {teams[0].name}
               </Text>
             ) : (
-              <View
-                style={{
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  gap: space.sm,
-                }}
+              <Host
+                colorScheme={colors.scheme}
+                seedColor={colors.primary}
+                matchContents
               >
-                {teams.map((t) => (
-                  <Pressable
-                    key={t.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: teamID === t.id }}
-                    onPress={() => setTeamID(t.id)}
-                    style={{
-                      padding: space.md,
-                      minHeight: 48,
-                      borderRadius: 12,
-                      backgroundColor:
-                        t.id === teamID ? colors.soft : colors.surface,
-                    }}
-                  >
-                    <Text style={[type.body, { color: colors.text }]}>
-                      {t.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+                <Picker
+                  selectedValue={teamID}
+                  onValueChange={setTeamID}
+                  testID="team-picker"
+                >
+                  {teams.map((t) => (
+                    <Picker.Item key={t.id} value={t.id} label={t.name} />
+                  ))}
+                </Picker>
+              </Host>
             ))}
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: space.xs,
+              justifyContent: "space-between",
+              gap: space.sm,
             }}
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="前 30 天"
-              disabled={busy || windowOffset <= -2}
-              onPress={() => setWindowOffset((v) => v - 1)}
+              accessibilityLabel="上個月"
+              disabled={busy || month === months[0]}
+              onPress={() => setMonth(shiftMonth(month, -1))}
               style={{
-                minWidth: 48,
+                minWidth: 44,
                 minHeight: 48,
-                justifyContent: "center",
                 alignItems: "center",
-                opacity: busy || windowOffset <= -2 ? 0.35 : 1,
+                justifyContent: "center",
+                opacity: busy || month === months[0] ? 0.3 : 1,
               }}
             >
               <AppIcon name="back" color={colors.primary} />
             </Pressable>
-            <Text
-              style={[
-                type.small,
-                {
+            {Platform.OS === "web" ? (
+              <select
+                aria-label="選擇月份"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                disabled={busy}
+                style={{
+                  fontFamily: "system-ui, sans-serif",
+                  fontSize: 18,
+                  fontWeight: 600,
                   color: colors.text,
-                  textAlign: "center",
-                  flex: 1,
-                  fontVariant: ["tabular-nums"],
-                },
-              ]}
-            >
-              {formatRange(
-                windowStart + (windowOffset - loadedWindow) * 30 * 86400000,
-                displayZone,
-              )}
-            </Text>
+                  background: "transparent",
+                  border: 0,
+                  minHeight: 48,
+                  maxWidth: "70%",
+                }}
+              >
+                {months.map((value) => (
+                  <option key={value} value={value}>
+                    {monthTitle(value)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Host
+                colorScheme={colors.scheme}
+                seedColor={colors.primary}
+                matchContents
+              >
+                <Picker
+                  selectedValue={month}
+                  onValueChange={setMonth}
+                  enabled={!busy}
+                  testID="month-picker"
+                >
+                  {months.map((value) => (
+                    <Picker.Item
+                      key={value}
+                      value={value}
+                      label={monthTitle(value)}
+                    />
+                  ))}
+                </Picker>
+              </Host>
+            )}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="後 30 天"
-              disabled={busy || windowOffset >= 2}
-              onPress={() => setWindowOffset((v) => v + 1)}
+              accessibilityLabel="下個月"
+              disabled={busy || month === months.at(-1)}
+              onPress={() => setMonth(shiftMonth(month, 1))}
               style={{
-                minWidth: 48,
+                minWidth: 44,
                 minHeight: 48,
-                justifyContent: "center",
                 alignItems: "center",
-                opacity: busy || windowOffset >= 2 ? 0.35 : 1,
+                justifyContent: "center",
+                opacity: busy || month === months.at(-1) ? 0.3 : 1,
               }}
             >
               <AppIcon name="next" color={colors.primary} />
@@ -478,7 +528,10 @@ export function TabScreen({ tab }: { tab: Tab }) {
             </Text>
           )}
           {updated && windowReady && !busy && !error && !roster.length && (
-            <EmptyState title="這段時間沒有安排" colors={colors} />
+            <EmptyState
+              title={teams.length ? "這個月沒有服事安排" : "尚未加入服事團契"}
+              colors={colors}
+            />
           )}
         </>
       )}
@@ -555,6 +608,7 @@ export function TabScreen({ tab }: { tab: Tab }) {
           )}
         </View>
       )}
+      {tab === "profile" && <MemberSummary />}
       {tab === "profile" && <AppearanceSettings />}
       {tab === "profile" && pref && <ReminderSettings preference={pref} />}
       {tab === "profile" && (
@@ -568,24 +622,124 @@ export function TabScreen({ tab }: { tab: Tab }) {
     </View>
   );
   return tab === "service" ? (
-    <FlatList
+    <SectionList
       {...scrollProps}
-      data={roster}
+      sections={sections}
+      stickySectionHeadersEnabled={false}
       keyExtractor={(a) => a.id}
-      renderItem={({ item, index }) =>
-        row(item, {
-          borderCurve: "continuous",
-          borderTopLeftRadius: index === 0 ? 22 : 0,
-          borderTopRightRadius: index === 0 ? 22 : 0,
-          borderBottomLeftRadius: index === roster.length - 1 ? 22 : 0,
-          borderBottomRightRadius: index === roster.length - 1 ? 22 : 0,
-          overflow: "hidden",
-        })
-      }
+      renderSectionHeader={({ section }) => (
+        <Text
+          accessibilityRole="header"
+          style={[
+            type.heading,
+            {
+              color: colors.text,
+              paddingTop: space.lg,
+              paddingBottom: space.sm,
+            },
+          ]}
+        >
+          {new Intl.DateTimeFormat("zh-TW", {
+            timeZone: displayZone,
+            month: "numeric",
+            day: "numeric",
+            weekday: "short",
+          }).format(new Date(section.data[0].startsAt))}
+        </Text>
+      )}
+      renderItem={({ item }) => row(item)}
       ListHeaderComponent={content}
     />
   ) : (
     <ScrollView {...scrollProps}>{content}</ScrollView>
+  );
+}
+function MemberSummary() {
+  const { colors, profile, profileError, refreshProfile, teams, updated } =
+    useService();
+  const name =
+    profile?.nickname ||
+    [profile?.last_name, profile?.first_name].filter(Boolean).join("") ||
+    "教會帳號";
+  return (
+    <View style={{ gap: space.lg, paddingVertical: space.md }}>
+      <View
+        style={{ flexDirection: "row", alignItems: "center", gap: space.lg }}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.soft,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <AppIcon name="profile" size={30} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1, gap: space.xs }}>
+          <Text
+            accessibilityRole="header"
+            style={[type.title, { color: colors.text }]}
+          >
+            {name}
+          </Text>
+          {profile?.email && (
+            <Text selectable style={[type.small, { color: colors.muted }]}>
+              {profile.email}
+            </Text>
+          )}
+        </View>
+      </View>
+      {profileError && (
+        <View style={{ gap: space.sm }}>
+          <Text
+            accessibilityRole="alert"
+            style={[type.small, { color: colors.muted }]}
+          >
+            {profileError}
+          </Text>
+          <Action
+            quiet
+            title="重新讀取會員資料"
+            colors={colors}
+            onPress={() => void refreshProfile()}
+          />
+        </View>
+      )}
+      {updated && (
+        <View style={{ gap: space.sm }}>
+          <SectionTitle title="我的團契" colors={colors} />
+          {teams.length ? (
+            teams.map((team) => (
+              <View
+                key={team.id}
+                style={{
+                  paddingVertical: space.md,
+                  gap: space.xs,
+                  borderBottomWidth: 0.5,
+                  borderColor: colors.line,
+                }}
+              >
+                <Text style={[type.body, { color: colors.text }]}>
+                  {team.name}
+                </Text>
+                {team.canManage && (
+                  <Text style={[type.small, { color: colors.muted }]}>
+                    團契負責人
+                  </Text>
+                )}
+              </View>
+            ))
+          ) : (
+            <Text style={[type.body, { color: colors.muted }]}>
+              尚未加入服事團契
+            </Text>
+          )}
+        </View>
+      )}
+    </View>
   );
 }
 export function AssignmentScreen() {

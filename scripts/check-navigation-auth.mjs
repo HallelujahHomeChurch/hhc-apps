@@ -1,7 +1,7 @@
-// sed 's/TASK_SPACE_ID/111/g' scripts/check-navigation-auth.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/114/g' scripts/check-navigation-auth.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const p = (await taskSpace(Number("TASK_SPACE_ID"))).page("p1");
-const origin = "http://localhost:5202";
+const origin = "http://localhost:5203";
 const login = 'loc=role:button[name="使用教會帳號登入"]';
 const logout = 'loc=role:button[name="登出"]';
 const toggle = '[data-testid="appearance-toggle"]';

@@ -1,5 +1,5 @@
 // Run against a synthetic preview in an existing Ego task space:
-// sed 's/TASK_SPACE_ID/111/g' scripts/check-pull-refresh.mjs | ego-browser nodejs
+// sed 's/TASK_SPACE_ID/114/g' scripts/check-pull-refresh.mjs | ego-browser nodejs
 const { strict: assert } = await import("node:assert");
 const space = await taskSpace(Number("TASK_SPACE_ID"));
 const p = space.page("p1");
@@ -13,7 +13,7 @@ await p.cdp("Emulation.setTouchEmulationEnabled", {
   enabled: true,
   maxTouchPoints: 1,
 });
-await p.goto("http://localhost:5202");
+await p.goto("http://localhost:5203");
 if (
   await p.evaluate(
     () => !!document.querySelector('[aria-label="使用教會帳號登入"]'),
@@ -100,9 +100,14 @@ try {
     "/",
     "Dragging a card must not open it",
   );
+  // The simplified home intentionally fits on screen; use the longer profile for this case.
+  await p.click("loc=href:/profile");
+  await p.waitForSelector('loc=role:combobox[name="提醒日期"]');
   assert.ok(
     await p.evaluate(() => {
-      const scroll = document.querySelector('[data-testid="pull-indicator"]')
+      const scroll = [
+        ...document.querySelectorAll('[data-testid="pull-indicator"]'),
+      ].find((e) => e.parentElement.getBoundingClientRect().height > 0)
         .parentElement.lastElementChild;
       scroll.scrollTop = 30;
       return scroll.scrollTop > 0;
@@ -117,11 +122,13 @@ try {
     "Only a gesture starting at the top refreshes",
   );
   await p.evaluate(() => {
-    document.querySelector(
-      '[data-testid="pull-indicator"]',
+    [...document.querySelectorAll('[data-testid="pull-indicator"]')].find(
+      (e) => e.parentElement.getBoundingClientRect().height > 0,
     ).parentElement.lastElementChild.scrollTop = 0;
     window.refreshQA.fail = true;
   });
+  await p.click("loc=href:/");
+  await p.waitForSelector('loc=role:button[name*="下一次服事"]');
   await drag(180);
   await idle();
   await p.waitForSelector('loc=role:button[name="重新整理"]', {

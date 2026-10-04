@@ -14,6 +14,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
+import { calendarMonth, monthRange } from "./presentation";
 import { systemPath } from "./navigation";
 import { useAppearance } from "./use-appearance";
 import { light, dark } from "./theme";
@@ -22,6 +23,7 @@ import { registerPush, revokePush } from "./push";
 import { Sessions } from "./session";
 import {
   APIError,
+  AccountProfile,
   Assignment,
   Candidate,
   Notice,
@@ -86,7 +88,11 @@ function useServiceState() {
   const [items, setItems] = useState<Assignment[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [pref, setPref] = useState<Preference | null>(null);
-  const [windowOffset, setWindowOffset] = useState(0);
+  const [month, setMonth] = useState(() =>
+    calendarMonth(Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+  );
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [profileError, setProfileError] = useState("");
   const [detail, setDetail] = useState<Assignment | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
 
@@ -107,8 +113,7 @@ function useServiceState() {
   const commandKeys = useRef(new Map<string, string>());
   const loadedAt = useRef(0);
   const detailLoad = useRef(0);
-  const [loadedWindow, setLoadedWindow] = useState(0);
-  const [windowStart, setWindowStart] = useState(Date.now());
+  const [loadedMonth, setLoadedMonth] = useState("");
   const clear = useCallback((keepPreference = false) => {
     generation.current++;
     detailLoad.current++;
@@ -117,6 +122,8 @@ function useServiceState() {
     setCandidates([]);
     setNotices([]);
     setTeams([]);
+    setProfile(null);
+    setProfileError("");
     if (!keepPreference) setPref(null);
     setUpdated(null);
     setBusy(false);
@@ -212,29 +219,50 @@ function useServiceState() {
         setError(message(e));
     }
   }, []);
+  const refreshProfile = useCallback(async () => {
+    if (!signed || !api.current || !session) return;
+    const revision = session.revision;
+    const epoch = generation.current;
+    setProfileError("");
+    try {
+      const value = await api.current.profile(
+        demoEnabled ? "https://demo.invalid/api/account/v1" : authBase,
+      );
+      if (revision === session.revision && epoch === generation.current)
+        setProfile(value);
+    } catch {
+      if (revision === session.revision && epoch === generation.current)
+        setProfileError("暫時無法讀取會員資料");
+    }
+  }, [signed, session]);
   const refresh = useCallback(async () => {
     if (!api.current || !session?.current) return;
     const epoch = ++generation.current;
+    void refreshProfile();
     setBusy(true);
     setError("");
     try {
       const ts = await api.current.teams();
-      const now = new Date(Date.now() + windowOffset * 30 * 86400000);
-      const until = new Date(now.getTime() + 30 * 86400000);
-      const all: Assignment[] = [];
-      for (const t of ts) {
+      const now = new Date();
+      const until = new Date(now.getTime() + 60 * 86400000);
+      const range = monthRange(month);
+      const load = async (team: string, from: string, to: string) => {
+        const rows: Assignment[] = [];
         let cursor = "";
         do {
-          const page = await api.current.list(
-            t.id,
-            now.toISOString(),
-            until.toISOString(),
-            cursor,
-          );
-          all.push(...page.items);
+          const page = await api.current!.list(team, from, to, cursor);
+          rows.push(...page.items);
           cursor = page.nextCursor || "";
         } while (cursor);
-      }
+        return rows;
+      };
+      const batches = await Promise.all(
+        ts.flatMap((t) => [
+          load(t.id, now.toISOString(), until.toISOString()),
+          load(t.id, range.from, range.to),
+        ]),
+      );
+      const all = [...new Map(batches.flat().map((a) => [a.id, a])).values()];
       const [ns, p] = await Promise.all([
         api.current.notifications(),
         api.current.preference(),
@@ -249,8 +277,7 @@ function useServiceState() {
       );
       setNotices(ns);
       setPref(p);
-      setLoadedWindow(windowOffset);
-      setWindowStart(now.getTime());
+      setLoadedMonth(month);
       setStale(false);
       setUpdated(Date.now());
       loadedAt.current = performance.now();
@@ -267,7 +294,7 @@ function useServiceState() {
     } finally {
       if (epoch === generation.current) setBusy(false);
     }
-  }, [session, clear, openDetail, windowOffset]);
+  }, [session, clear, openDetail, month, refreshProfile]);
   useEffect(() => {
     if (signed) void refresh();
   }, [signed, refresh]);
@@ -509,10 +536,12 @@ function useServiceState() {
     items,
     notices,
     pref,
-    windowOffset,
-    setWindowOffset,
-    loadedWindow,
-    windowStart,
+    month,
+    setMonth,
+    loadedMonth,
+    profile,
+    profileError,
+    refreshProfile,
     detail,
     candidates,
     busy,
