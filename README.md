@@ -12,7 +12,7 @@ npm ci
 npm run demo:web
 ```
 
-Open `http://localhost:5197` (stop any static preview already using that port first). The prominent demo banner means **synthetic data**:
+Open `http://localhost:5198` (stop any static preview already using that port first). The demo label means **synthetic data**:
 no real accounts, server mutations or push delivery. The demo transport never
 uses the network. Reload resets its sample state. This preview is for layout
 and interaction review, not acceptance of authentication or native notifications.
@@ -24,7 +24,7 @@ Use a development/internal native build for push testing, not a web preview.
 
 ## Architecture
 
-The UI refinement branch is `feat/mobile-modern-20261004`, in a separate worktree
+The UI refinement branch is `feat/mobile-native-20261004`, in a separate worktree
 from the original MVP. See [UI review](docs/ui-review.md) for design decisions,
 verified interactions and the remaining native-device checks.
 
@@ -38,9 +38,16 @@ verified interactions and the remaining native-device checks.
   after generating the shared package; never edit generated types by hand.
 - `src/push.ts`: device-secret registration, Expo token refresh, permission
   handling and logout revocation. The server owns reminder scheduling.
-- `App.tsx`: four-tab native shell and member workflows. Website DOM components
-  are not imported into React Native; colors and interaction conventions follow
-  the existing HHC UI. Icons are copied unchanged from the website brand assets.
+- `src/app/`: Expo Router routes with platform-native tabs and a native detail
+  stack. iOS uses system Liquid Glass on supported OS/build combinations; web
+  uses JavaScript tabs for preview, not a simulation of Apple's glass rendering.
+- `src/service-state.tsx`: one shared session/data controller across routes.
+- `src/screens.tsx`, `src/service-ui.tsx`, `src/reminder-settings.tsx`: member
+  screens, progressive replacement actions and native reminder controls.
+- `src/navigation.ts`: preserves existing `hhc-app://service/:id` links. Native
+  OAuth callbacks retain the requested detail destination after login.
+- `src/theme.ts`: mobile-owned HHC color and typography tokens. Website DOM
+  components are not imported into the native app.
 
 Rosters and notices are memory-only, expire after five monotonic minutes, and
 clear on logout, account change or denied authorization. Deep links/pushes carry
@@ -56,11 +63,12 @@ next successful unregister/account rebind. No personal content is in those pushe
 npm run typecheck
 npm test
 npx expo-doctor
-EXPO_PUBLIC_DEMO=false npx expo export --platform all
+EXPO_PUBLIC_DEMO=false npx expo export --clear --platform all
 ```
 
 The tests cover refresh-token recovery, stale responses after logout, denied
-cache access and version/idempotency propagation. Backend transactions, races,
+cache access, version/idempotency propagation, old deep links, timezone date
+boundaries and reminder-control validation. Backend transactions, races,
 IANA/DST reminders, membership revocation, device ownership and durable provider
 receipts are tested in the corresponding Operations/Notification worktrees.
 CI verifies source and bundles; native signing and physical device smoke are
@@ -88,12 +96,12 @@ separate steps. No application-store submission is automated.
 ## Current limitations and delivery boundary
 
 - This repository has no remote yet. Feature work is isolated on
-  `feat/service-app-mvp-20261004`; no existing website release was changed.
+  `feat/mobile-native-20261004`; earlier worktrees and website releases are untouched.
 - This machine has no full Xcode or Android SDK. iOS/Android Hermes bundles build,
   but no signed IPA/APK or real-device acceptance has been produced.
-- An online npm audit recorded Expo tooling transitive advisories for braces,
-  node-forge and uuid (23 total, 16 high / 7 moderate). The suggested SDK downgrade
-  is incompatible and was not applied. Recheck upstream fixes before a release;
-  an offline install's zero-audit message is not evidence these are fixed.
+- Installing the SDK-compatible Router dependencies reported 29 upstream npm
+  advisories (19 high / 10 moderate), versus 23 in the preceding baseline.
+  This iteration does not resolve that release gate or apply forced SDK changes.
+  Expo Doctor compatibility success does not mean vulnerability remediation.
 - Native reminders are configured but require the test infrastructure and
   provider credentials above before delivery can be exercised end to end.
