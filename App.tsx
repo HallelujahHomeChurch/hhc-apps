@@ -1,16 +1,27 @@
+import { Host, Switch } from "@expo/ui";
+import { light, dark, type, space } from "./src/theme";
+import {
+  Action,
+  AppIcon,
+  AssignmentRow,
+  NextService,
+  SectionTitle,
+  EmptyState,
+  ReplacementActions,
+  DetailScreen,
+} from "./src/service-ui";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   AppState,
   Linking,
   BackHandler,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   useColorScheme,
@@ -40,24 +51,6 @@ const authBase = account.replace(/\/$/, "") + "/api/account/v1";
 const apiOrigin = process.env.EXPO_PUBLIC_API_URL || "";
 const clientID = process.env.EXPO_PUBLIC_OAUTH_CLIENT_ID || "hhc-app";
 const ready = [account, apiOrigin].every((v) => /^https:\/\//.test(v));
-const light = {
-  canvas: "#fbf5eb",
-  surface: "#fffdf9",
-  text: "#372d2b",
-  muted: "#746c67",
-  line: "#eee3d7",
-  primary: "#ad493f",
-  soft: "#f5e5df",
-};
-const dark = {
-  canvas: "#1d1a19",
-  surface: "#282321",
-  text: "#f3ece7",
-  muted: "#bcb1aa",
-  line: "#443b37",
-  primary: "#b64e45",
-  soft: "#44312d",
-};
 type API = ReturnType<typeof serviceAPI>;
 const labels = {
   home: "首頁",
@@ -98,7 +91,7 @@ function AppContent() {
   const [windowOffset, setWindowOffset] = useState(0);
   const [detail, setDetail] = useState<Assignment | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [target, setTarget] = useState("");
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [updated, setUpdated] = useState<number | null>(null);
@@ -129,7 +122,7 @@ function AppContent() {
     commandKeys.current.clear();
   }, []);
   const text = (value: string, style?: object) => (
-    <Text style={[{ color: colors.text }, style]}>{value}</Text>
+    <Text style={[type.body, { color: colors.text }, style]}>{value}</Text>
   );
   const button = (
     label: string,
@@ -137,28 +130,13 @@ function AppContent() {
     secondary = false,
     disabled = false,
   ) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled || busy}
+    <Action
+      title={label}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        {
-          backgroundColor: secondary ? colors.soft : colors.primary,
-          opacity: disabled || busy ? 0.45 : pressed ? 0.75 : 1,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.buttonText,
-          { color: secondary ? colors.text : "#fff8f4" },
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
+      colors={colors}
+      secondary={secondary}
+      disabled={disabled || busy}
+    />
   );
   const date = (iso: string) =>
     new Intl.DateTimeFormat("zh-TW", {
@@ -244,7 +222,6 @@ function AppContent() {
       const a = await api.current.detail(id);
       if (epoch !== generation.current) return;
       setDetail(a);
-      setTarget("");
       const members = await api.current.candidates(a.teamId);
       if (epoch === generation.current) setCandidates(members);
     } catch (e) {
@@ -476,6 +453,7 @@ function AppContent() {
         setError(message(e));
         await openDetail(detail.id);
       }
+      throw new Error(message(e));
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -488,344 +466,553 @@ function AppContent() {
       teams.some((t) => t.id === a.teamId && t.memberId === a.assigneeMemberId),
   );
   const card = (a: Assignment) => (
-    <Pressable
+    <AssignmentRow
       key={a.id}
-      accessibilityRole="button"
-      accessibilityLabel={`${a.label}，${date(a.startsAt)}`}
+      assignment={a}
+      colors={colors}
+      zone={displayZone}
       onPress={() => void openDetail(a.id)}
-      style={[
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.line },
-      ]}
-    >
-      {text(date(a.startsAt), styles.caption)}
-      {text(a.label, styles.cardTitle)}
-      {text(
-        `${teams.find((t) => t.id === a.teamId)?.name || a.teamName} · ${a.meetingName}`,
-        { color: colors.muted },
-      )}
-      <View style={styles.row}>
-        {text(
-          a.cancelled
-            ? "已取消"
-            : a.assigneeMemberId
-              ? a.assigneeName || "已安排同工"
-              : "待補人選",
-          { fontWeight: "600" },
-        )}
-        {text(
-          a.request?.status === "active"
-            ? "正在找代班"
-            : a.helpOpen
-              ? "已請負責人協助"
-              : "查看詳情 →",
-          { color: colors.primary },
-        )}
-      </View>
-    </Pressable>
+    />
   );
+  const invitations = items.filter(
+    (a) =>
+      !a.cancelled &&
+      Date.parse(a.startsAt) > Date.now() &&
+      a.request?.status === "active" &&
+      a.request.mode === "nominated" &&
+      teams.some(
+        (t) => t.id === a.teamId && t.memberId === a.request?.targetMemberId,
+      ),
+  );
+  const [rosterMode, setRosterMode] = useState<"mine" | "team">("mine");
   return (
     <SafeAreaView style={[styles.shell, { backgroundColor: colors.canvas }]}>
-      <View style={styles.header}>
-        {text("HALLELUJAH HOME CHURCH", styles.eyebrow)}
-        {text(signed ? labels[tab] : "一起服事", styles.title)}
-        {text(
-          signed
-            ? "在每一次服事中，彼此支持。"
-            : "使用教會帳號查看班表，與團契同工彼此配搭。",
-          { color: colors.muted },
-        )}
-      </View>
-      {demoEnabled ? (
-        <View style={styles.notice}>
-          {text("示範模式 · 使用合成資料，沒有發送通知")}
-        </View>
-      ) : null}
-      {error ? (
-        <View
-          accessibilityRole="alert"
-          style={[styles.notice, { backgroundColor: colors.soft }]}
-        >
-          {text(error)}
-        </View>
-      ) : null}
-      {busy ? (
-        <ActivityIndicator color={colors.primary} accessibilityLabel="載入中" />
-      ) : null}
-      {!signed ? (
-        <View style={styles.content}>
-          {text("你的服事，在這裡", styles.cardTitle)}
-          {text("查看接下來的服事、尋找代班，並依自己的時區收到提醒。", {
-            lineHeight: 26,
-          })}
-          {!ready
-            ? text("測試環境尚未設定，暫時無法登入。", { color: colors.muted })
-            : null}
-          {button(
-            "使用教會帳號登入",
-            () => void login(),
-            false,
-            !ready || !session,
+      <View
+        style={{
+          flex: 1,
+          display: detail && Platform.OS === "web" ? "none" : "flex",
+        }}
+      >
+        <View style={styles.header}>
+          <View style={styles.row}>
+            {text("哈利路亞家教會", {
+              ...type.small,
+              color: colors.primary,
+              fontWeight: "600",
+            })}
+            {signed ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="重新整理"
+                onPress={() => void refresh()}
+                disabled={busy}
+                style={styles.iconButton}
+              >
+                <AppIcon name="refresh" color={colors.muted} />
+              </Pressable>
+            ) : null}
+          </View>
+          {text(
+            signed
+              ? tab === "home"
+                ? "接下來的服事"
+                : labels[tab]
+              : "一起服事",
+            styles.title,
           )}
+          {tab === "home"
+            ? text(
+                updated
+                  ? `${mine.length} 次服事安排 · ${invitations.length} 則待回覆邀請`
+                  : "查看安排與同工的邀請",
+                {
+                  ...type.small,
+                  color: colors.muted,
+                },
+              )
+            : null}
         </View>
-      ) : (
-        <>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            refreshControl={
-              <RefreshControl
-                refreshing={busy}
-                onRefresh={() => void refresh()}
-                tintColor={colors.primary}
-              />
-            }
+        {demoEnabled ? (
+          <View style={styles.demo}>
+            {text("示範預覽 · 合成資料，不會發送通知", {
+              ...type.caption,
+              color: colors.muted,
+            })}
+          </View>
+        ) : null}
+        {error ? (
+          <View
+            accessibilityRole="alert"
+            style={[styles.notice, { backgroundColor: colors.soft }]}
           >
-            {stale
-              ? text("目前顯示暫存班表；連線恢復前無法確認最新權限與安排。", {
+            {text(error)}
+          </View>
+        ) : null}
+        {busy ? (
+          <ActivityIndicator
+            color={colors.primary}
+            accessibilityLabel="載入中"
+          />
+        ) : null}
+        {!signed ? (
+          <View style={styles.content}>
+            {text("你的服事，在這裡", styles.cardTitle)}
+            {text("查看接下來的服事、尋找代班，並依自己的時區收到提醒。", {
+              lineHeight: 26,
+            })}
+            {!ready
+              ? text("測試環境尚未設定，暫時無法登入。", {
                   color: colors.muted,
                 })
               : null}
-            {updated
-              ? text(
-                  `更新於 ${new Date(updated).toLocaleTimeString("zh-TW")} · ${displayZone}`,
-                  styles.caption,
-                )
-              : null}
-            {tab === "home" ? (
-              <>
-                {text("下一次服事", styles.section)}
-                {mine[0] ? card(mine[0]) : text("目前沒有即將到來的服事。")}
-                {text("待回覆的代班邀請", styles.section)}
-                {items
-                  .filter(
-                    (a) =>
-                      a.request?.status === "active" &&
-                      a.request.mode === "nominated" &&
-                      teams.some(
-                        (t) => t.memberId === a.request?.targetMemberId,
-                      ),
-                  )
-                  .map(card)}
-              </>
-            ) : null}
-            {tab === "service" ? (
-              <>
-                <View style={styles.row}>
-                  {teams.map((t) => (
-                    <Pressable
-                      key={t.id}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: teamID === t.id }}
-                      onPress={() => setTeamID(t.id)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor:
-                            teamID === t.id ? colors.primary : colors.surface,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: teamID === t.id ? "white" : colors.text,
-                        }}
-                      >
-                        {t.name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                {text("團契完整班表", styles.section)}
-                <View style={styles.row}>
-                  {button(
-                    "前 30 天",
-                    () => setWindowOffset((v) => v - 1),
-                    true,
-                    windowOffset <= -2,
-                  )}
-                  {text(
-                    windowOffset === 0
-                      ? "近期 30 天"
-                      : `${windowOffset > 0 ? "後" : "前"} ${Math.abs(windowOffset) * 30} 天起`,
-                    styles.caption,
-                  )}
-                  {button(
-                    "後 30 天",
-                    () => setWindowOffset((v) => v + 1),
-                    true,
-                    windowOffset >= 2,
-                  )}
-                </View>
-                {items.filter((a) => a.teamId === teamID).map(card)}
-                {!items.some((a) => a.teamId === teamID)
-                  ? text("這個團契目前沒有班表。")
-                  : null}
-              </>
-            ) : null}
-            {tab === "notifications" ? (
-              <>
-                {notices.map((n) => (
-                  <Pressable
-                    key={n.id}
-                    onPress={() => {
-                      void api.current
-                        ?.read(n.id)
-                        .then(() =>
-                          setNotices((values) =>
-                            values.map((v) =>
-                              v.id === n.id
-                                ? { ...v, readAt: new Date().toISOString() }
-                                : v,
-                            ),
-                          ),
-                        )
-                        .catch((e) => setError(message(e)));
-                      void openDetail(n.assignmentId);
-                    }}
-                    style={[
-                      styles.card,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.line,
-                      },
-                    ]}
-                  >
-                    {text(
-                      actionName[n.kind] || "服事狀態已更新",
-                      styles.cardTitle,
-                    )}
-                    {text(date(n.createdAt), styles.caption)}
-                    {text(n.readAt ? "已讀" : "未讀", {
-                      color: colors.primary,
-                    })}
-                  </Pressable>
-                ))}
-                {!notices.length ? text("目前沒有通知。") : null}
-              </>
-            ) : null}
-            {tab === "profile" ? (
-              <>
-                {text("個人提醒", styles.section)}
-                {pref ? (
-                  <>
-                    <View style={styles.row}>
-                      {text("開啟服事提醒")}
-                      <Switch
-                        accessibilityLabel="開啟服事提醒"
-                        value={pref.enabled}
-                        onValueChange={(enabled) =>
-                          setPref({ ...pref, enabled })
-                        }
-                      />
-                    </View>
-                    {input(
-                      String(pref.leadDays),
-                      (s) => setPref({ ...pref, leadDays: Number(s) }),
-                      "提前天數（0–7）",
-                    )}
-                    {input(
-                      pref.localTime,
-                      (s) => setPref({ ...pref, localTime: s }),
-                      "提醒時間（HH:mm）",
-                    )}
-                    {input(
-                      pref.timeZone,
-                      (s) => setPref({ ...pref, timeZone: s }),
-                      "提醒時區（例如 Asia/Taipei）",
-                    )}
-                    {button("儲存提醒", () => {
-                      if (!api.current) return;
-                      setBusy(true);
-                      void api.current
-                        .savePreference(pref)
-                        .then(async (p) => {
-                          setPref(p);
-                          await refresh();
-                        })
-                        .catch((e) => setError(message(e)))
-                        .finally(() => setBusy(false));
-                    })}
-                    {text(
-                      "時區不會隨旅行自動改變；所有裝置共用這組提醒設定。",
-                      { color: colors.muted, lineHeight: 24 },
-                    )}
-                  </>
-                ) : null}
-                {input(zoneDraft, setZoneDraft, "班表顯示時區")}
-                {button(
-                  "套用顯示時區",
-                  () => {
-                    try {
-                      new Intl.DateTimeFormat("zh-TW", { timeZone: zoneDraft });
-                      setDisplayZone(zoneDraft);
-                      setError("");
-                    } catch {
-                      setError("請輸入有效的 IANA 時區。");
-                    }
-                  },
-                  true,
-                )}
-                {text("手機通知 · " + permission, styles.section)}
-                {button(
-                  "設定手機通知",
-                  () => {
-                    if (!api.current) return;
-                    void registerPush(api.current, true)
-                      .then(setPermission)
-                      .catch((e) => setError(message(e)));
-                  },
-                  true,
-                )}
-                {button("登出", () => void logout(), true)}
-              </>
-            ) : null}
-            {button("重新整理", () => void refresh(), true)}
-          </ScrollView>
-          <View
-            style={[
-              styles.tabs,
-              { borderColor: colors.line, backgroundColor: colors.surface },
-            ]}
-          >
-            {(Object.keys(labels) as Tab[]).map((t) => (
-              <Pressable
-                key={t}
-                onPress={() => setTab(t)}
-                accessibilityLabel={labels[t]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === t }}
-                style={styles.tab}
-              >
-                <Text
-                  style={{
-                    color: t === tab ? colors.primary : colors.muted,
-                    fontWeight: t === tab ? "700" : "400",
-                  }}
-                >
-                  {labels[t]}
-                </Text>
-              </Pressable>
-            ))}
+            {button(
+              "使用教會帳號登入",
+              () => void login(),
+              false,
+              !ready || !session,
+            )}
           </View>
-        </>
-      )}
-      <Modal
-        visible={!!detail}
-        animationType="slide"
-        onRequestClose={() => setDetail(null)}
-      >
+        ) : (
+          <>
+            <FlatList
+              keyboardShouldPersistTaps="handled"
+              contentInsetAdjustmentBehavior="automatic"
+              contentContainerStyle={styles.content}
+              refreshControl={
+                <RefreshControl
+                  refreshing={busy}
+                  onRefresh={() => void refresh()}
+                  tintColor={colors.primary}
+                />
+              }
+              data={
+                tab === "service"
+                  ? items.filter((a) =>
+                      rosterMode === "team"
+                        ? a.teamId === teamID
+                        : teams.some(
+                            (t) =>
+                              t.id === a.teamId &&
+                              t.memberId === a.assigneeMemberId,
+                          ),
+                    )
+                  : []
+              }
+              keyExtractor={(a) => a.id}
+              renderItem={({ item }) => card(item)}
+              ListHeaderComponent={
+                <View style={{ gap: space.lg }}>
+                  {stale
+                    ? text(
+                        "目前顯示暫存班表；連線恢復前無法確認最新權限與安排。",
+                        {
+                          color: colors.muted,
+                        },
+                      )
+                    : null}
+                  {tab === "home" ? (
+                    <>
+                      {mine[0] ? (
+                        <NextService
+                          assignment={mine[0]}
+                          colors={colors}
+                          zone={displayZone}
+                          onPress={() => void openDetail(mine[0].id)}
+                        />
+                      ) : !busy && !error ? (
+                        <EmptyState
+                          title="目前沒有即將到來的服事"
+                          description="新的安排會出現在這裡，也可以到服事頁查看團契班表。"
+                          colors={colors}
+                        />
+                      ) : null}
+                      <SectionTitle
+                        title="需要你的回覆"
+                        subtitle={
+                          invitations.length
+                            ? `${invitations.length} 位同工邀請你一起配搭`
+                            : undefined
+                        }
+                        colors={colors}
+                      />
+                      {invitations.length ? (
+                        <View style={styles.group}>
+                          {invitations.map(card)}
+                        </View>
+                      ) : !busy && !error ? (
+                        <EmptyState
+                          title="目前沒有待回覆邀請"
+                          description="收到同工的代班邀請時，會在這裡提醒你。"
+                          colors={colors}
+                        />
+                      ) : null}
+                      <SectionTitle
+                        title="接下來的安排"
+                        subtitle="未來 30 天"
+                        colors={colors}
+                      />
+                      <View style={styles.group}>
+                        {mine.slice(1, 4).map(card)}
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          setRosterMode("mine");
+                          setTab("service");
+                        }}
+                        style={[styles.row, styles.textLink]}
+                      >
+                        {text("查看我的完整班表", {
+                          color: colors.primary,
+                          fontWeight: "600",
+                        })}
+                        <AppIcon name="next" color={colors.primary} />
+                      </Pressable>
+                    </>
+                  ) : null}
+                  {tab === "service" ? (
+                    <>
+                      <View
+                        style={[
+                          styles.segment,
+                          { backgroundColor: colors.line },
+                        ]}
+                      >
+                        {(["mine", "team"] as const).map((mode) => (
+                          <Pressable
+                            key={mode}
+                            accessibilityRole="tab"
+                            accessibilityState={{
+                              selected: rosterMode === mode,
+                            }}
+                            onPress={() => setRosterMode(mode)}
+                            style={[
+                              styles.segmentItem,
+                              {
+                                backgroundColor:
+                                  rosterMode === mode
+                                    ? colors.surface
+                                    : "transparent",
+                              },
+                            ]}
+                          >
+                            {text(mode === "mine" ? "我的服事" : "團契班表", {
+                              fontWeight: rosterMode === mode ? "600" : "400",
+                            })}
+                          </Pressable>
+                        ))}
+                      </View>
+                      {rosterMode === "team" ? (
+                        <View style={styles.row}>
+                          {teams.map((t) => (
+                            <Pressable
+                              key={t.id}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: teamID === t.id }}
+                              onPress={() => setTeamID(t.id)}
+                              style={[
+                                styles.chip,
+                                {
+                                  backgroundColor:
+                                    teamID === t.id
+                                      ? colors.primary
+                                      : colors.surface,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={{
+                                  color:
+                                    teamID === t.id
+                                      ? colors.onPrimary
+                                      : colors.text,
+                                }}
+                              >
+                                {t.name}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      ) : null}
+                      <View style={styles.row}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="前 30 天"
+                          disabled={busy || windowOffset <= -2}
+                          onPress={() => setWindowOffset((v) => v - 1)}
+                          style={[
+                            styles.iconButton,
+                            { opacity: busy || windowOffset <= -2 ? 0.35 : 1 },
+                          ]}
+                        >
+                          <AppIcon name="back" color={colors.primary} />
+                        </Pressable>
+                        {text(
+                          windowOffset === 0
+                            ? "近期 30 天"
+                            : `${windowOffset > 0 ? "後" : "前"} ${Math.abs(windowOffset) * 30} 天起`,
+                          styles.caption,
+                        )}
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="後 30 天"
+                          disabled={busy || windowOffset >= 2}
+                          onPress={() => setWindowOffset((v) => v + 1)}
+                          style={[
+                            styles.iconButton,
+                            { opacity: busy || windowOffset >= 2 ? 0.35 : 1 },
+                          ]}
+                        >
+                          <AppIcon name="next" color={colors.primary} />
+                        </Pressable>
+                      </View>
+                      {!busy &&
+                      !error &&
+                      !items.some((a) =>
+                        rosterMode === "team"
+                          ? a.teamId === teamID
+                          : teams.some(
+                              (t) =>
+                                t.id === a.teamId &&
+                                t.memberId === a.assigneeMemberId,
+                            ),
+                      ) ? (
+                        <EmptyState
+                          title="這段時間沒有服事安排"
+                          description="試著切換日期範圍，或查看團契的完整班表。"
+                          colors={colors}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                  {tab === "notifications" ? (
+                    <>
+                      {notices.map((n) => (
+                        <Pressable
+                          key={n.id}
+                          onPress={() => {
+                            void api.current
+                              ?.read(n.id)
+                              .then(() =>
+                                setNotices((values) =>
+                                  values.map((v) =>
+                                    v.id === n.id
+                                      ? {
+                                          ...v,
+                                          readAt: new Date().toISOString(),
+                                        }
+                                      : v,
+                                  ),
+                                ),
+                              )
+                              .catch((e) => setError(message(e)));
+                            void openDetail(n.assignmentId);
+                          }}
+                          style={[
+                            styles.card,
+                            {
+                              backgroundColor: colors.surface,
+                              borderColor: colors.line,
+                            },
+                          ]}
+                        >
+                          {text(
+                            actionName[n.kind] || "服事狀態已更新",
+                            styles.cardTitle,
+                          )}
+                          {text(date(n.createdAt), styles.caption)}
+                          {text(n.readAt ? "已讀" : "未讀", {
+                            color: colors.primary,
+                          })}
+                        </Pressable>
+                      ))}
+                      {!notices.length ? text("目前沒有通知。") : null}
+                    </>
+                  ) : null}
+                  {tab === "profile" ? (
+                    <>
+                      {text("個人提醒", styles.section)}
+                      {pref ? (
+                        <>
+                          <View style={styles.row}>
+                            <Host matchContents>
+                              <Switch
+                                label="開啟服事提醒"
+                                value={pref.enabled}
+                                onValueChange={(enabled) =>
+                                  setPref({ ...pref, enabled })
+                                }
+                              />
+                            </Host>
+                          </View>
+                          {input(
+                            String(pref.leadDays),
+                            (s) => setPref({ ...pref, leadDays: Number(s) }),
+                            "提前天數（0–7）",
+                          )}
+                          {input(
+                            pref.localTime,
+                            (s) => setPref({ ...pref, localTime: s }),
+                            "提醒時間（HH:mm）",
+                          )}
+                          {input(
+                            pref.timeZone,
+                            (s) => setPref({ ...pref, timeZone: s }),
+                            "提醒時區（例如 Asia/Taipei）",
+                          )}
+                          {button("儲存提醒", () => {
+                            if (!api.current) return;
+                            setBusy(true);
+                            void api.current
+                              .savePreference(pref)
+                              .then(async (p) => {
+                                setPref(p);
+                                await refresh();
+                              })
+                              .catch((e) => setError(message(e)))
+                              .finally(() => setBusy(false));
+                          })}
+                          {text(
+                            "時區不會隨旅行自動改變；所有裝置共用這組提醒設定。",
+                            { color: colors.muted, lineHeight: 24 },
+                          )}
+                        </>
+                      ) : null}
+                      {input(zoneDraft, setZoneDraft, "班表顯示時區")}
+                      {button(
+                        "套用顯示時區",
+                        () => {
+                          try {
+                            new Intl.DateTimeFormat("zh-TW", {
+                              timeZone: zoneDraft,
+                            });
+                            setDisplayZone(zoneDraft);
+                            setError("");
+                          } catch {
+                            setError("請輸入有效的 IANA 時區。");
+                          }
+                        },
+                        true,
+                      )}
+                      {text("手機通知 · " + permission, styles.section)}
+                      {button(
+                        "設定手機通知",
+                        () => {
+                          if (!api.current) return;
+                          void registerPush(api.current, true)
+                            .then(setPermission)
+                            .catch((e) => setError(message(e)));
+                        },
+                        true,
+                      )}
+                      {button("登出", () => void logout(), true)}
+                    </>
+                  ) : null}
+                </View>
+              }
+              ListFooterComponent={
+                <View style={{ marginTop: space.lg }}>
+                  {" "}
+                  {updated
+                    ? text(
+                        `更新於 ${new Date(updated).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })} · ${displayZone}`,
+                        {
+                          ...type.caption,
+                          color: colors.muted,
+                          marginTop: space.lg,
+                        },
+                      )
+                    : null}
+                </View>
+              }
+            />
+            <View
+              style={[
+                styles.tabs,
+                { borderColor: colors.line, backgroundColor: colors.surface },
+              ]}
+            >
+              {(Object.keys(labels) as Tab[]).map((t) => (
+                <Pressable
+                  key={t}
+                  onPress={() => {
+                    if (t === "home") setWindowOffset(0);
+                    setTab(t);
+                  }}
+                  accessibilityLabel={labels[t]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: tab === t }}
+                  style={({ pressed }) => [
+                    styles.tab,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                >
+                  <AppIcon
+                    name={t}
+                    color={t === tab ? colors.primary : colors.muted}
+                  />
+                  <Text
+                    style={{
+                      color: t === tab ? colors.primary : colors.muted,
+                      fontWeight: t === tab ? "700" : "400",
+                    }}
+                  >
+                    {labels[t]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+      <DetailScreen visible={!!detail} onClose={() => setDetail(null)}>
         <SafeAreaView
           style={[styles.shell, { backgroundColor: colors.canvas }]}
         >
-          <ScrollView contentContainerStyle={styles.content}>
-            {button("返回班表", () => setDetail(null), true)}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="automatic"
+            contentContainerStyle={styles.content}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="返回班表"
+              onPress={() => setDetail(null)}
+              style={[styles.row, { alignSelf: "flex-start", minHeight: 48 }]}
+            >
+              <AppIcon name="back" color={colors.primary} />
+              {text("返回班表", { color: colors.primary })}
+            </Pressable>
             {detail ? (
               <>
-                {text(detail.label, styles.title)}
-                {text(date(detail.startsAt), styles.section)}
-                {text(`${detail.meetingName} · 聚會時區 ${detail.timeZone}`, {
-                  color: colors.muted,
+                {text(detail.teamName, {
+                  ...type.small,
+                  color: colors.primary,
+                  fontWeight: "600",
                 })}
+                {text(detail.label, styles.title)}
+                <View
+                  style={[
+                    styles.detailGroup,
+                    { backgroundColor: colors.surface },
+                  ]}
+                >
+                  <View style={styles.detailRow}>
+                    <AppIcon name="service" color={colors.muted} />
+                    {text(date(detail.startsAt), {
+                      flex: 1,
+                      fontWeight: "600",
+                    })}
+                  </View>
+                  <View style={styles.detailRow}>
+                    <AppIcon name="people" color={colors.muted} />
+                    {text(detail.meetingName, { flex: 1 })}
+                  </View>
+                  {text(`顯示時區 ${displayZone}`, {
+                    ...type.caption,
+                    color: colors.muted,
+                  })}
+                </View>
                 {text(
                   detail.cancelled
                     ? "這項服事已取消"
@@ -875,119 +1062,19 @@ function AppContent() {
                     {text(error, { color: colors.primary })}
                   </View>
                 ) : null}
-                {!detail.cancelled && Date.parse(detail.startsAt) > Date.now()
-                  ? (() => {
-                      const owner =
-                        teams.find((t) => t.id === detail.teamId)?.memberId ===
-                        detail.assigneeMemberId;
-                      const member = teams.find(
-                        (t) => t.id === detail.teamId,
-                      )?.memberId;
-                      const active = detail.request?.status === "active";
-                      return owner ? (
-                        <>
-                          {text("找同工代班", styles.section)}
-                          {text("對方接受前，這次服事仍由你負責。", {
-                            color: colors.muted,
-                          })}
-                          {candidates
-                            .filter((c) => c.id !== member)
-                            .map((c) => (
-                              <Pressable
-                                key={c.id}
-                                accessibilityRole="radio"
-                                accessibilityState={{
-                                  checked: target === c.id,
-                                }}
-                                onPress={() => setTarget(c.id)}
-                                style={[
-                                  styles.chip,
-                                  {
-                                    backgroundColor:
-                                      target === c.id
-                                        ? colors.soft
-                                        : colors.surface,
-                                  },
-                                ]}
-                              >
-                                {text((target === c.id ? "● " : "○ ") + c.name)}
-                              </Pressable>
-                            ))}
-                          {button(
-                            active ? "切換為指定同工" : "邀請指定同工",
-                            () =>
-                              void command(active ? "switch" : "request", {
-                                mode: "nominated",
-                                targetMemberId: target,
-                                ...(active
-                                  ? { requestId: detail.request!.id }
-                                  : {}),
-                              }),
-                            false,
-                            !target,
-                          )}
-                          {button(
-                            active ? "切換為團契徵求" : "向團契公開徵求",
-                            () =>
-                              void command(active ? "switch" : "request", {
-                                mode: "open",
-                                ...(active
-                                  ? { requestId: detail.request!.id }
-                                  : {}),
-                              }),
-                            true,
-                          )}
-                          {active
-                            ? button(
-                                "撤回代班請求",
-                                () =>
-                                  void command("withdraw", {
-                                    requestId: detail.request!.id,
-                                  }),
-                                true,
-                              )
-                            : null}
-                          {button(
-                            "請團契負責人協助",
-                            () => void command("help"),
-                            true,
-                            detail.helpOpen,
-                          )}
-                        </>
-                      ) : active &&
-                        (detail.request!.mode === "open" ||
-                          detail.request!.targetMemberId === member) ? (
-                        <>
-                          {text(
-                            "接受後，這次服事將由你負責。請確認日期與任務。",
-                            { lineHeight: 26 },
-                          )}
-                          {button(
-                            "確認接受這次服事",
-                            () =>
-                              void command("accept", {
-                                requestId: detail.request!.id,
-                              }),
-                          )}
-                          {detail.request!.mode === "nominated"
-                            ? button(
-                                "婉拒",
-                                () =>
-                                  void command("decline", {
-                                    requestId: detail.request!.id,
-                                  }),
-                                true,
-                              )
-                            : null}
-                        </>
-                      ) : null;
-                    })()
-                  : null}
+                <ReplacementActions
+                  assignment={detail}
+                  candidates={candidates}
+                  memberId={teams.find((t) => t.id === detail.teamId)?.memberId}
+                  busy={busy}
+                  colors={colors}
+                  onCommand={command}
+                />
               </>
             ) : null}
           </ScrollView>
         </SafeAreaView>
-      </Modal>
+      </DetailScreen>
     </SafeAreaView>
   );
 }
@@ -1000,44 +1087,84 @@ export default function App() {
 }
 const styles = StyleSheet.create({
   shell: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 18, gap: 10 },
-  eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { fontSize: 32, fontWeight: "700" },
-  section: { fontSize: 20, fontWeight: "700", marginTop: 12 },
-  content: { padding: 24, gap: 16, paddingBottom: 40 },
-  card: { padding: 20, borderRadius: 8, borderWidth: 1, gap: 12 },
-  cardTitle: { fontSize: 22, fontWeight: "600" },
-  caption: { fontSize: 13, lineHeight: 20 },
+  header: {
+    paddingHorizontal: space.page,
+    paddingTop: space.sm,
+    paddingBottom: space.lg,
+    gap: space.xs,
+  },
+  title: type.title,
+  section: { ...type.heading, marginTop: space.md },
+  content: {
+    paddingHorizontal: space.page,
+    paddingTop: space.sm,
+    gap: space.lg,
+    paddingBottom: space.xxl,
+  },
+  card: {
+    padding: space.lg,
+    borderRadius: 12,
+    borderCurve: "continuous",
+    gap: space.sm,
+  },
+  cardTitle: type.heading,
+  caption: type.small,
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: space.sm,
     justifyContent: "space-between",
     alignItems: "center",
   },
-  button: {
-    minHeight: 48,
-    borderRadius: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  buttonText: { fontWeight: "600", fontSize: 16 },
-  chip: { padding: 12, borderRadius: 8, minHeight: 44 },
+  chip: { padding: space.md, borderRadius: 12, minHeight: 48 },
   input: {
-    minHeight: 48,
-    padding: 12,
+    minHeight: 52,
+    padding: space.md,
     borderWidth: 1,
-    borderRadius: 8,
-    fontSize: 16,
+    borderRadius: 12,
+    ...type.body,
   },
   notice: {
-    padding: 16,
-    marginHorizontal: 24,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: space.lg,
+    marginHorizontal: space.page,
+    borderRadius: 12,
+    marginBottom: space.md,
   },
-  tabs: { flexDirection: "row", borderTopWidth: 1, paddingVertical: 10 },
-  tab: { flex: 1, alignItems: "center", padding: 14 },
+  demo: { paddingHorizontal: space.page, paddingBottom: space.md },
+  tabs: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: space.sm,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    padding: space.sm,
+    gap: space.xs,
+    minHeight: 60,
+  },
+  iconButton: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  group: { borderRadius: 16, borderCurve: "continuous", overflow: "hidden" },
+  textLink: { minHeight: 48 },
+  segment: { flexDirection: "row", borderRadius: 12, padding: space.xs },
+  segmentItem: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: space.sm,
+    borderRadius: 8,
+  },
+  detailGroup: {
+    padding: space.lg,
+    gap: space.lg,
+    borderRadius: 16,
+    borderCurve: "continuous",
+  },
+  detailRow: { flexDirection: "row", alignItems: "center", gap: space.md },
 });
