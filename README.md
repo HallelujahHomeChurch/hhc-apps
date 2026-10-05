@@ -31,9 +31,10 @@ Use a development/internal native build for push testing, not a web preview.
 
 ## Architecture
 
-The UI refinement branch is `feat/mobile-interaction-20261004`, in a separate worktree
-from the original MVP. See [UI review](docs/ui-review.md) for design decisions,
-verified interactions and the remaining native-device checks.
+The latest shared iOS/Android implementation is on
+`feat/mobile-android-demo-20261005`, which includes the iPhone member-design work.
+See [member design](docs/member-design.md), [iOS local testing](docs/ios-local.md)
+and [Android demo](docs/android-demo.md) for design and verification details.
 
 - `src/session.ts`: PKCE token exchange, SecureStore integration through an
   injected storage interface, serialized refresh, epoch fencing, and distinct
@@ -102,11 +103,15 @@ separate steps. No application-store submission is automated.
 
 ## Current limitations and delivery boundary
 
-- This repository has no remote yet. Feature work is isolated on
-  `feat/mobile-native-20261004`; earlier worktrees and website releases are untouched.
-- This machine has no full Xcode or Android SDK. iOS/Android Hermes bundles build,
-  but no signed IPA/APK or real-device acceptance has been produced.
-- Installing the SDK-compatible Router dependencies reported 29 upstream npm
+- The remote is [HallelujahHomeChurch/hhc-apps](https://github.com/HallelujahHomeChurch/hhc-apps).
+  Feature work remains unmerged on `feat/mobile-android-demo-20261005`;
+  `main` retains the initial bootstrap commit. Earlier worktrees and website
+  releases are untouched.
+- Local Xcode and Android SDK tooling are installed. iPhone simulator flows and
+  a standalone Android demo APK on an Android 17 emulator have been exercised.
+  The APK uses a development signing key; store distribution, physical-device
+  acceptance and production OAuth/API/push integration remain open.
+- At the earlier Router upgrade, installing SDK-compatible dependencies reported 29 upstream npm
   advisories (19 high / 10 moderate), versus 23 in the preceding baseline.
   This iteration does not resolve that release gate or apply forced SDK changes.
   Expo Doctor compatibility success does not mean vulnerability remediation.
